@@ -1,0 +1,225 @@
+.row {
+  background: var(--gray-800);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  border: 1px solid transparent;
+}
+
+.row.deadlineRisk {
+  border-color: var(--red);
+}
+
+.row.completed .detail {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+}
+
+.checkbox {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: 2px solid var(--gray-500);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.checkbox:hover {
+  border-color: var(--orange);
+}
+
+.row.completed .checkbox {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail {
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 0.35rem;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.tag,
+.pill {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.tagDefault { background: var(--gray-600); color: #fff; }
+.tag_urgent { background: var(--red); color: #fff; }
+.tag_financial { background: var(--orange); color: #fff; }
+.tag_immigration { background: var(--purple); color: #fff; }
+.tag_health { background: var(--teal); color: #fff; }
+.tag_paperwork { background: var(--gray-600); color: #fff; }
+.tag_call { background: var(--gray-500); color: #fff; }
+.tag_home { background: var(--green); color: #fff; }
+.tag_project { background: var(--purple); color: #fff; }
+.tag_family { background: var(--orange); color: #fff; }
+
+.deadlineBadge {
+  font-size: 0.65rem;
+  padding: 0.2rem 0.45rem;
+  background: var(--red);
+  color: #fff;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  position: relative;
+}
+
+.menuBtn {
+  color: var(--gray-400);
+  padding: 0.35rem 0.5rem;
+  font-size: 1rem;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.menuBtn:hover {
+  color: #fff;
+  background: var(--gray-600);
+}
+
+.menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.25rem;
+  min-width: 180px;
+  background: var(--gray-700);
+  border: 1px solid var(--gray-600);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  overflow: hidden;
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.85rem;
+  color: #e4e4e7;
+  border: none;
+  background: none;
+}
+
+.menuItem:hover {
+  background: var(--gray-600);
+}
+
+.expand {
+  color: var(--gray-400);
+  padding: 0.25rem;
+  font-size: 0.7rem;
+}
+
+.expanded {
+  padding: 0 1rem 1rem 3rem;
+  border-top: 1px solid var(--gray-700);
+  padding-top: 1rem;
+  margin-top: -0.5rem;
+}
+
+.info {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--gray-400);
+}
+
+.comments {
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.comments pre {
+  white-space: pre-wrap;
+  margin-top: 0.25rem;
+  color: var(--gray-400);
+}
+
+.field {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--gray-400);
+}
+
+.input,
+.textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.5rem;
+  background: #27272a;
+  border: 1px solid var(--gray-600);
+  border-radius: 6px;
+  color: #fff;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.btnPrimary {
+  padding: 0.5rem 1rem;
+  background: var(--orange);
+  color: #fff;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.btnSecondary {
+  padding: 0.5rem 1rem;
+  background: var(--gray-600);
+  color: #fff;
+  border-radius: 6px;
+}
+
+.btnDanger {
+  padding: 0.5rem 1rem;
+  background: var(--red);
+  color: #fff;
+  border-radius: 6px;
+}

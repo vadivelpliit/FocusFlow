@@ -1,0 +1,201 @@
+.wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--gray-400);
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+
+.tagline {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  margin-bottom: 1rem;
+}
+
+.planBtn {
+  padding: 0.6rem 1.25rem;
+  background: var(--orange);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.planBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.dayTabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.dayTab {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  background: var(--gray-800);
+  color: var(--gray-400);
+  border-radius: 6px;
+}
+
+.dayTab:hover {
+  background: var(--gray-700);
+  color: #fff;
+}
+
+.dayTabActive {
+  background: var(--orange);
+  color: #fff;
+}
+
+.section {
+  margin-bottom: 1.5rem;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 0.35rem;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  margin-bottom: 0.75rem;
+}
+
+.inputGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+}
+
+.inputLabel {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+}
+
+.textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.2rem;
+  padding: 0.4rem;
+  background: var(--gray-800);
+  border: 1px solid var(--gray-600);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.8rem;
+  resize: vertical;
+}
+
+.activities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.activityBtn {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  background: var(--gray-700);
+  color: var(--gray-400);
+  border-radius: 6px;
+}
+
+.activityBtn:hover {
+  background: var(--gray-600);
+  color: #fff;
+}
+
+.activityBtnActive {
+  background: var(--orange);
+  color: #fff;
+}
+
+.error {
+  color: var(--red);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.blocksGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.dayColumn {
+  background: var(--gray-800);
+  border-radius: 8px;
+  padding: 0.75rem;
+  min-height: 120px;
+}
+
+.dayName {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-400);
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--gray-700);
+}
+
+.block {
+  display: block;
+  font-size: 0.75rem;
+  margin-bottom: 0.4rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--gray-700);
+}
+
+.block:last-child {
+  border-bottom: none;
+}
+
+.blockTime {
+  color: var(--gray-500);
+  display: block;
+}
+
+.blockLabel {
+  color: #e4e4e7;
+}
+
+.emptyDay {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+}
+
+.applyBtn {
+  padding: 0.5rem 1rem;
+  background: var(--green);
+  color: #fff;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .inputGrid,
+  .blocksGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,116 @@
+.wrapper {
+  padding: 1.5rem;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.loading,
+.error {
+  padding: 2rem;
+  text-align: center;
+  color: var(--gray-400);
+}
+
+.error {
+  color: var(--red);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.search {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.5rem 0.75rem;
+  background: var(--gray-800);
+  border: 1px solid var(--gray-600);
+  border-radius: 6px;
+  color: #fff;
+}
+
+.search::placeholder {
+  color: var(--gray-500);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pill {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  background: var(--gray-700);
+  color: var(--gray-400);
+  transition: background 0.15s, color 0.15s;
+}
+
+.pill:hover {
+  background: var(--gray-600);
+  color: #fff;
+}
+
+.pillActive {
+  background: var(--orange);
+  color: #fff;
+}
+
+.addBtn {
+  display: block;
+  margin-bottom: 1.25rem;
+  padding: 0.5rem 0;
+  color: var(--orange);
+  font-size: 0.9rem;
+}
+
+.addBtn:hover {
+  text-decoration: underline;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #fff;
+}
+
+.sectionIcon_urgent {
+  color: var(--red);
+}
+
+.sectionIcon_important {
+  color: var(--yellow);
+}
+
+.sectionIcon_someday {
+  color: var(--green);
+}
+
+.remaining {
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--gray-500);
+}
+
+.empty {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  padding: 0.5rem 0;
+}

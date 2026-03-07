@@ -1,0 +1,91 @@
+.card {
+  background: var(--gray-800);
+  border: 1px solid var(--gray-700);
+  border-radius: 10px;
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  color: #e4e4e7;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.icon {
+  font-size: 1rem;
+}
+
+.chevron {
+  color: var(--gray-500);
+  font-size: 0.7rem;
+}
+
+.body {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--gray-700);
+}
+
+.description {
+  font-size: 0.85rem;
+  color: var(--gray-400);
+  margin: 0.75rem 0 1rem;
+  line-height: 1.4;
+}
+
+.success {
+  font-size: 0.85rem;
+  color: var(--green);
+  margin-bottom: 0.75rem;
+}
+
+.error {
+  font-size: 0.85rem;
+  color: var(--red);
+  margin-bottom: 0.75rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.btnPrimary {
+  padding: 0.5rem 1rem;
+  background: var(--orange);
+  color: #fff;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  padding: 0.5rem 1rem;
+  color: #3b82f6;
+  font-size: 0.9rem;
+}
+
+.btnSecondary:hover {
+  text-decoration: underline;
+}

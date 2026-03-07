@@ -1,0 +1,111 @@
+.form {
+  background: var(--gray-800);
+  border: 1px solid var(--gray-700);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--gray-400);
+  margin-bottom: 0.75rem;
+}
+
+.input,
+.textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: #27272a;
+  border: 1px solid var(--gray-600);
+  border-radius: 6px;
+  color: #fff;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.tagBtn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  background: var(--gray-700);
+  color: var(--gray-400);
+}
+
+.tagBtn:hover {
+  background: var(--gray-600);
+  color: #fff;
+}
+
+.tagBtnActive {
+  background: var(--orange);
+  color: #fff;
+}
+
+.customTag {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.customTag .input {
+  flex: 1;
+}
+
+.smallBtn {
+  padding: 0.5rem 0.75rem;
+  background: var(--gray-600);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.error {
+  color: var(--red);
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.btnPrimary {
+  padding: 0.5rem 1.25rem;
+  background: var(--orange);
+  color: #fff;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  padding: 0.5rem 1rem;
+  background: var(--gray-600);
+  color: #fff;
+  border-radius: 6px;
+}

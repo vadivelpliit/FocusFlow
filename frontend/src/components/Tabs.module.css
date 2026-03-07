@@ -1,0 +1,31 @@
+.tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 1.5rem;
+  background: #18181b;
+  border-bottom: 1px solid var(--gray-700);
+}
+
+.tab {
+  padding: 0.9rem 1.25rem;
+  color: var(--gray-400);
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab:hover {
+  color: #fff;
+}
+
+.tab.active {
+  color: var(--orange);
+  border-bottom-color: var(--orange);
+}
+
+.icon {
+  margin-right: 0.4rem;
+  opacity: 0.9;
+}

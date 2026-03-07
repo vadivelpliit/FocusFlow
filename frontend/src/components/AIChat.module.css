@@ -1,0 +1,108 @@
+.wrapper {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.userBubble,
+.assistantBubble {
+  max-width: 85%;
+  align-self: flex-start;
+}
+
+.userBubble {
+  align-self: flex-end;
+}
+
+.bubbleContent {
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.assistantBubble .bubbleContent {
+  background: var(--gray-700);
+  color: #e4e4e7;
+}
+
+.userBubble .bubbleContent {
+  background: var(--orange);
+  color: #fff;
+}
+
+.error {
+  color: var(--red);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.suggested {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.suggestedBtn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.suggestedBtn:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.suggestedBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  background: var(--gray-800);
+  border: 1px solid var(--gray-600);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.input::placeholder {
+  color: var(--gray-500);
+}
+
+.sendBtn {
+  padding: 0.65rem 1.25rem;
+  background: var(--orange);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.sendBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

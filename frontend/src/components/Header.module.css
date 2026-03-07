@@ -1,0 +1,46 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: #18181b;
+  border-bottom: 1px solid var(--gray-700);
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, #fff 0%, var(--orange) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tagline {
+  font-size: 0.8rem;
+  color: var(--gray-400);
+}
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.completedLabel {
+  font-size: 0.7rem;
+  color: var(--gray-500);
+  letter-spacing: 0.05em;
+}
+
+.count {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+}
