@@ -127,4 +127,18 @@ export const api = {
     ),
   applySchedule: (blocks: { day_of_week: number; start_time: string; end_time: string; label: string }[]) =>
     fetchApi<unknown>("/schedule/apply", { method: "POST", body: JSON.stringify({ blocks }) }),
+
+  // Day log (what I did per date) + AI recommend
+  getDayLog: (dateStr: string) =>
+    fetchApi<{ date: string; content: string | null }>(`/schedule/day-log?date=${encodeURIComponent(dateStr)}`),
+  putDayLog: (dateStr: string, content: string | null) =>
+    fetchApi<{ date: string; content: string | null }>(`/schedule/day-log?date=${encodeURIComponent(dateStr)}`, {
+      method: "PUT",
+      body: JSON.stringify({ content }),
+    }),
+  getRecommend: (dateStr: string) =>
+    fetchApi<{ recommendation: string; window_start: string; window_end: string }>("/schedule/recommend", {
+      method: "POST",
+      body: JSON.stringify({ date: dateStr }),
+    }),
 };

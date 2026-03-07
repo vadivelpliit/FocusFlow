@@ -1,6 +1,7 @@
+from datetime import date, timedelta
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -9,9 +10,14 @@ from ..crud import (
     get_schedule_blocks,
     replace_schedule_blocks,
     set_schedule_input,
+    get_day_log,
+    set_day_log,
+    get_day_logs_in_range,
+    get_tasks_due_in_range,
 )
 from ..database import get_db
 from ..llm.schedule import propose_schedule
+from ..llm.recommend import recommend_plan, get_recommend_window
 from ..schemas import ScheduleBlockResponse, UserScheduleInputResponse
 
 router = APIRouter(prefix="/schedule", tags=["schedule"])
@@ -96,3 +102,82 @@ def apply_schedule(body: ScheduleApplyRequest, db: Session = Depends(get_db)):
     """Replace all schedule blocks with the given list (e.g. from propose)."""
     blocks = [b.model_dump() for b in body.blocks]
     return replace_schedule_blocks(db, blocks)
+
+
+# --- Day log (what I did per calendar date) + AI recommend ---
+
+class DayLogResponse(BaseModel):
+    date: str
+    content: Optional[str] = None
+
+
+class DayLogPut(BaseModel):
+    content: Optional[str] = None
+
+
+@router.get("/day-log", response_model=DayLogResponse)
+def get_day_log_route(
+    date_str: str = Query(..., description="Date YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+):
+    """Get 'what I did' for a specific calendar date."""
+    try:
+        d = date.fromisoformat(date_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date, use YYYY-MM-DD")
+    row = get_day_log(db, d)
+    if not row:
+        return DayLogResponse(date=date_str, content=None)
+    return DayLogResponse(date=date_str, content=row.content)
+
+
+@router.put("/day-log", response_model=DayLogResponse)
+def put_day_log_route(
+    date_str: str = Query(..., description="Date YYYY-MM-DD"),
+    body: DayLogPut = ...,
+    db: Session = Depends(get_db),
+):
+    """Set 'what I did' for a specific calendar date (persisted)."""
+    try:
+        d = date.fromisoformat(date_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date, use YYYY-MM-DD")
+    set_day_log(db, d, body.content)
+    return DayLogResponse(date=date_str, content=body.content)
+
+
+class RecommendRequest(BaseModel):
+    date: str  # YYYY-MM-DD anchor date
+
+
+class RecommendResponse(BaseModel):
+    recommendation: str
+    window_start: str
+    window_end: str
+
+
+@router.post("/recommend", response_model=RecommendResponse)
+def recommend_route(body: RecommendRequest, db: Session = Depends(get_db)):
+    """Get AI recommendation for rest of this week + next week, learning from past 'what I did' logs."""
+    try:
+        anchor = date.fromisoformat(body.date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date, use YYYY-MM-DD")
+    try:
+        start, end = get_recommend_window(anchor)
+        # Past logs: e.g. last 30 days before anchor (to detect patterns)
+        past_start = anchor - timedelta(days=30)
+        past_logs = get_day_logs_in_range(db, past_start, anchor - timedelta(days=1))
+        past_data = [{"date": str(r.date), "content": r.content} for r in past_logs]
+        blocks = get_schedule_blocks(db)
+        tasks_due = get_tasks_due_in_range(db, start, end)
+        recommendation = recommend_plan(anchor, past_data, blocks, tasks_due)
+        return RecommendResponse(
+            recommendation=recommendation,
+            window_start=start.isoformat(),
+            window_end=end.isoformat(),
+        )
+    except ValueError as e:
+        if "OPENAI_API_KEY" in str(e):
+            raise HTTPException(status_code=503, detail="AI recommend is not configured. Set OPENAI_API_KEY.")
+        raise

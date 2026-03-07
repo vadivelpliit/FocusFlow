@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from .models import Task, ScheduleBlock, UserScheduleInput
+from .models import Task, ScheduleBlock, UserScheduleInput, DayLog
 from .schemas import TaskCreate, TaskUpdate
 
 
@@ -119,3 +119,40 @@ def replace_schedule_blocks(db: Session, blocks: List[dict]) -> List[ScheduleBlo
         ))
     db.commit()
     return get_schedule_blocks(db)
+
+
+# Day log: what I did on a calendar date (persisted memory)
+def get_day_log(db: Session, log_date: date) -> Optional[DayLog]:
+    return db.query(DayLog).filter(DayLog.date == log_date).first()
+
+
+def set_day_log(db: Session, log_date: date, content: Optional[str]) -> DayLog:
+    row = db.query(DayLog).filter(DayLog.date == log_date).first()
+    if row:
+        row.content = content
+        db.commit()
+        db.refresh(row)
+        return row
+    row = DayLog(date=log_date, content=content)
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def get_day_logs_in_range(db: Session, start_date: date, end_date: date) -> List[DayLog]:
+    return (
+        db.query(DayLog)
+        .filter(DayLog.date >= start_date, DayLog.date <= end_date)
+        .order_by(DayLog.date.asc())
+        .all()
+    )
+
+
+def get_tasks_due_in_range(db: Session, start_date: date, end_date: date) -> List[Task]:
+    return (
+        db.query(Task)
+        .filter(Task.completed == False, Task.due_date.isnot(None), Task.due_date >= start_date, Task.due_date <= end_date)
+        .order_by(Task.due_date.asc())
+        .all()
+    )

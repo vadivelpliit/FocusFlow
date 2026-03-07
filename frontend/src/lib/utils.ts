@@ -16,6 +16,6 @@ export const TIME_HORIZON_SECTIONS = [
 
 export function getSectionForHorizon(horizon: string | null): string {
   if (!horizon) return "someday";
-  const section = TIME_HORIZON_SECTIONS.find((s) => s.horizons.includes(horizon));
+  const section = TIME_HORIZON_SECTIONS.find((s) => (s.horizons as readonly string[]).includes(horizon));
   return section?.id ?? "someday";
 }

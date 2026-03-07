@@ -39,3 +39,12 @@ class UserScheduleInput(Base):
     id = Column(Integer, primary_key=True, index=True)
     day_of_week = Column(Integer, nullable=False)
     user_description = Column(Text, nullable=True)
+
+
+class DayLog(Base):
+    """What I did on a specific calendar date (persisted memory per date)."""
+    __tablename__ = "day_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, unique=True, nullable=False, index=True)
+    content = Column(Text, nullable=True)
