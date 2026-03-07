@@ -60,8 +60,12 @@ export function WeekPlanner() {
   }, []);
 
   useEffect(() => {
-    if (selectedDate) loadDayLog(selectedDate);
-    else setWhatIDid("");
+    if (selectedDate) {
+      setWhatIDid(""); // Clear immediately so we don't show previous date's content
+      loadDayLog(selectedDate);
+    } else {
+      setWhatIDid("");
+    }
   }, [selectedDate, loadDayLog]);
 
   const saveDayLog = async () => {
@@ -96,8 +100,16 @@ export function WeekPlanner() {
   const grid = getMonthGrid(currentYear, currentMonth);
   const monthLabel = new Date(currentYear, currentMonth, 1).toLocaleString("default", { month: "long", year: "numeric" });
 
-  const handleSelectDay = (day: number) => {
+  const handleSelectDay = async (day: number) => {
     const dateStr = formatDateKey(new Date(currentYear, currentMonth, day));
+    // Save current date's "what I did" before switching, so it persists to the backend
+    if (selectedDate && selectedDate !== dateStr) {
+      try {
+        await api.putDayLog(selectedDate, whatIDid.trim() || null);
+      } catch {
+        // Non-blocking: still switch date; user can retry save on the date later
+      }
+    }
     setSelectedDate(dateStr);
   };
 

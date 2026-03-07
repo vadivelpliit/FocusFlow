@@ -1,4 +1,11 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+function getApiBase(): string {
+  const raw = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const trimmed = (typeof raw === "string" ? raw : "").trim();
+  if (!trimmed) return "http://localhost:8000";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  return `https://${trimmed}`;
+}
+const API_BASE = getApiBase();
 
 export interface Task {
   id: number;
@@ -51,10 +58,18 @@ async function fetchApi<T>(
       if (v != null && v !== "") url.searchParams.set(k, v);
     });
   }
-  const res = await fetch(url.toString(), {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init.headers },
-  });
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      ...init,
+      headers: { "Content-Type": "application/json", ...init.headers },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Network error";
+    if (msg === "Failed to fetch" || msg.includes("fetch"))
+      throw new Error("Cannot reach the API. Check that the backend is running and allows this origin (set CORS_ORIGINS to your site URL on Railway).");
+    throw e;
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || res.statusText);

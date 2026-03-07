@@ -15,7 +15,11 @@ from .api.schedule import router as schedule_router
 from .database import engine, Base
 
 # CORS: allow localhost for dev; in production set CORS_ORIGINS (comma-separated) e.g. https://yourapp.vercel.app
-_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").strip().split(",")
+# Origins are normalized (no trailing slash) to match the browser's Origin header
+_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").strip()
+_cors_origins = [o.strip().rstrip("/") for o in _raw.split(",") if o.strip()]
+if not _cors_origins:
+    _cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
 
 @asynccontextmanager
