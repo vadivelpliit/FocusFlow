@@ -1,7 +1,10 @@
+import logging
 from datetime import date, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -126,6 +129,8 @@ def get_day_log_route(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date, use YYYY-MM-DD")
     row = get_day_log(db, d)
+    content = row.content if row else None
+    logger.info("day-log GET date=%s found=%s content_len=%s", date_str, row is not None, len(content) if content else 0)
     if not row:
         return DayLogResponse(date=date_str, content=None)
     return DayLogResponse(date=date_str, content=row.content)
@@ -142,7 +147,10 @@ def put_day_log_route(
         d = date.fromisoformat(date_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date, use YYYY-MM-DD")
+    content_len = len(body.content) if body.content else 0
+    logger.info("day-log PUT date=%s content_len=%s", date_str, content_len)
     set_day_log(db, d, body.content)
+    logger.info("day-log PUT date=%s committed", date_str)
     return DayLogResponse(date=date_str, content=body.content)
 
 

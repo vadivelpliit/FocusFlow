@@ -49,9 +49,13 @@ export function WeekPlanner() {
     setLoadingLog(true);
     setError(null);
     try {
+      console.log("[WeekPlanner] Loading day log for", dateStr);
       const res = await api.getDayLog(dateStr);
-      setWhatIDid(res.content || "");
+      const content = res.content || "";
+      console.log("[WeekPlanner] Loaded:", dateStr, "length:", content.length);
+      setWhatIDid(content);
     } catch (e) {
+      console.error("[WeekPlanner] Load failed:", dateStr, e instanceof Error ? e.message : e);
       setWhatIDid("");
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -72,10 +76,15 @@ export function WeekPlanner() {
     if (!selectedDate) return;
     setSavingLog(true);
     setError(null);
+    const content = whatIDid.trim() || null;
     try {
-      await api.putDayLog(selectedDate, whatIDid.trim() || null);
+      console.log("[WeekPlanner] Saving day log:", { date: selectedDate, contentLength: content?.length ?? 0 });
+      await api.putDayLog(selectedDate, content);
+      console.log("[WeekPlanner] Save succeeded for", selectedDate);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save");
+      const msg = e instanceof Error ? e.message : "Failed to save";
+      console.error("[WeekPlanner] Save failed:", selectedDate, msg);
+      setError(msg);
     } finally {
       setSavingLog(false);
     }
@@ -104,10 +113,14 @@ export function WeekPlanner() {
     const dateStr = formatDateKey(new Date(currentYear, currentMonth, day));
     // Save current date's "what I did" before switching, so it persists to the backend
     if (selectedDate && selectedDate !== dateStr) {
+      const content = whatIDid.trim() || null;
       try {
-        await api.putDayLog(selectedDate, whatIDid.trim() || null);
-      } catch {
-        // Non-blocking: still switch date; user can retry save on the date later
+        console.log("[WeekPlanner] Save-before-switch:", { date: selectedDate, contentLength: content?.length ?? 0 });
+        await api.putDayLog(selectedDate, content);
+        console.log("[WeekPlanner] Save-before-switch succeeded for", selectedDate);
+      } catch (e) {
+        console.error("[WeekPlanner] Save-before-switch failed:", selectedDate, e instanceof Error ? e.message : e);
+        setError(e instanceof Error ? e.message : "Failed to save when switching date");
       }
     }
     setSelectedDate(dateStr);
