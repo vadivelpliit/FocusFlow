@@ -120,7 +120,7 @@ class DayLogPut(BaseModel):
 
 @router.get("/day-log", response_model=DayLogResponse)
 def get_day_log_route(
-    date_str: str = Query(..., description="Date YYYY-MM-DD"),
+    date_str: str = Query(..., description="Date YYYY-MM-DD", alias="date"),
     db: Session = Depends(get_db),
 ):
     """Get 'what I did' for a specific calendar date."""
@@ -138,7 +138,7 @@ def get_day_log_route(
 
 @router.put("/day-log", response_model=DayLogResponse)
 def put_day_log_route(
-    date_str: str = Query(..., description="Date YYYY-MM-DD"),
+    date_str: str = Query(..., description="Date YYYY-MM-DD", alias="date"),
     body: DayLogPut = ...,
     db: Session = Depends(get_db),
 ):
