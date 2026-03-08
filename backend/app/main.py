@@ -16,11 +16,17 @@ from .api.schedule import router as schedule_router
 from .database import engine, Base
 
 # CORS: allow localhost for dev; in production set CORS_ORIGINS (comma-separated) e.g. https://yourapp.vercel.app
-# Origins are normalized (no trailing slash) to match the browser's Origin header
+# Origins are normalized (no trailing slash); we allow both with and without trailing slash for compatibility
 _raw = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").strip()
 _cors_origins = [o.strip().rstrip("/") for o in _raw.split(",") if o.strip()]
 if not _cors_origins:
     _cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+# Allow both origin and origin/ so browser quirks don't break CORS
+_extra = [o + "/" for o in _cors_origins if o and not o.endswith("/")]
+_cors_origins = list(_cors_origins) + _extra
+
+# Log at startup so Railway deploy logs show CORS is loaded (env vars applied after redeploy)
+print("CORS allowed origins:", _cors_origins)
 
 
 @asynccontextmanager
