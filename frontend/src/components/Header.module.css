@@ -27,6 +27,29 @@
   color: var(--gray-400);
 }
 
+.right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.username {
+  font-size: 0.9rem;
+  color: var(--gray-400);
+}
+
+.logout {
+  padding: 0.35rem 0.75rem;
+  background: var(--gray-700);
+  color: #e4e4e7;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.logout:hover {
+  background: var(--gray-600);
+}
+
 .stats {
   display: flex;
   flex-direction: column;

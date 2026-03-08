@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ..auth.deps import get_current_user
 from ..crud import (
     get_schedule_inputs,
     get_schedule_blocks,
@@ -20,6 +21,7 @@ from ..crud import (
 )
 from ..database import get_db
 from ..llm.schedule import propose_schedule
+from ..models import User
 from ..llm.recommend import recommend_plan, get_recommend_window
 from ..schemas import ScheduleBlockResponse, UserScheduleInputResponse
 
@@ -57,9 +59,9 @@ def _inputs_to_response() -> List[dict]:
 
 
 @router.get("/inputs", response_model=List[UserScheduleInputResponse])
-def list_schedule_inputs(db: Session = Depends(get_db)):
+def list_schedule_inputs(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get current week description: one row per day (0=Monday .. 6=Sunday)."""
-    rows = get_schedule_inputs(db)
+    rows = get_schedule_inputs(db, current_user.id)
     by_day = {r.day_of_week: r for r in rows}
     return [
         UserScheduleInputResponse(
@@ -71,25 +73,25 @@ def list_schedule_inputs(db: Session = Depends(get_db)):
 
 
 @router.put("/inputs")
-def put_schedule_inputs(body: ScheduleInputsPut, db: Session = Depends(get_db)):
+def put_schedule_inputs(body: ScheduleInputsPut, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Set description for each day. Send inputs with day_of_week 0-6."""
     for item in body.inputs:
         if 0 <= item.day_of_week <= 6:
-            set_schedule_input(db, item.day_of_week, item.user_description or None)
+            set_schedule_input(db, current_user.id, item.day_of_week, item.user_description or None)
     return {"ok": True}
 
 
 @router.get("/blocks", response_model=List[ScheduleBlockResponse])
-def list_schedule_blocks(db: Session = Depends(get_db)):
+def list_schedule_blocks(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get all schedule blocks (saved week plan)."""
-    return get_schedule_blocks(db)
+    return get_schedule_blocks(db, current_user.id)
 
 
 @router.post("/propose")
-def propose_week_schedule(body: ScheduleProposeRequest, db: Session = Depends(get_db)):
+def propose_week_schedule(body: ScheduleProposeRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Generate a proposed 7-day schedule from current descriptions + desired activities. Does not save."""
     try:
-        rows = get_schedule_inputs(db)
+        rows = get_schedule_inputs(db, current_user.id)
         by_day = {r.day_of_week: r for r in rows}
         day_descriptions = [by_day.get(d) and by_day[d].user_description or "" for d in range(7)]
         blocks = propose_schedule(day_descriptions, body.desired_activities or [])
@@ -101,10 +103,10 @@ def propose_week_schedule(body: ScheduleProposeRequest, db: Session = Depends(ge
 
 
 @router.post("/apply", response_model=List[ScheduleBlockResponse])
-def apply_schedule(body: ScheduleApplyRequest, db: Session = Depends(get_db)):
+def apply_schedule(body: ScheduleApplyRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Replace all schedule blocks with the given list (e.g. from propose)."""
     blocks = [b.model_dump() for b in body.blocks]
-    return replace_schedule_blocks(db, blocks)
+    return replace_schedule_blocks(db, current_user.id, blocks)
 
 
 # --- Day log (what I did per calendar date) + AI recommend ---
@@ -122,13 +124,14 @@ class DayLogPut(BaseModel):
 def get_day_log_route(
     date_str: str = Query(..., description="Date YYYY-MM-DD", alias="date"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Get 'what I did' for a specific calendar date."""
     try:
         d = date.fromisoformat(date_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date, use YYYY-MM-DD")
-    row = get_day_log(db, d)
+    row = get_day_log(db, current_user.id, d)
     content = row.content if row else None
     logger.info("day-log GET date=%s found=%s content_len=%s", date_str, row is not None, len(content) if content else 0)
     if not row:
@@ -141,6 +144,7 @@ def put_day_log_route(
     date_str: str = Query(..., description="Date YYYY-MM-DD", alias="date"),
     body: DayLogPut = ...,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Set 'what I did' for a specific calendar date (persisted)."""
     try:
@@ -149,7 +153,7 @@ def put_day_log_route(
         raise HTTPException(status_code=400, detail="Invalid date, use YYYY-MM-DD")
     content_len = len(body.content) if body.content else 0
     logger.info("day-log PUT date=%s content_len=%s", date_str, content_len)
-    set_day_log(db, d, body.content)
+    set_day_log(db, current_user.id, d, body.content)
     logger.info("day-log PUT date=%s committed", date_str)
     return DayLogResponse(date=date_str, content=body.content)
 
@@ -165,7 +169,7 @@ class RecommendResponse(BaseModel):
 
 
 @router.post("/recommend", response_model=RecommendResponse)
-def recommend_route(body: RecommendRequest, db: Session = Depends(get_db)):
+def recommend_route(body: RecommendRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get AI recommendation for rest of this week + next week, learning from past 'what I did' logs."""
     try:
         anchor = date.fromisoformat(body.date)
@@ -173,12 +177,11 @@ def recommend_route(body: RecommendRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid date, use YYYY-MM-DD")
     try:
         start, end = get_recommend_window(anchor)
-        # Past logs: e.g. last 30 days before anchor (to detect patterns)
         past_start = anchor - timedelta(days=30)
-        past_logs = get_day_logs_in_range(db, past_start, anchor - timedelta(days=1))
+        past_logs = get_day_logs_in_range(db, current_user.id, past_start, anchor - timedelta(days=1))
         past_data = [{"date": str(r.date), "content": r.content} for r in past_logs]
-        blocks = get_schedule_blocks(db)
-        tasks_due = get_tasks_due_in_range(db, start, end)
+        blocks = get_schedule_blocks(db, current_user.id)
+        tasks_due = get_tasks_due_in_range(db, current_user.id, start, end)
         recommendation = recommend_plan(anchor, past_data, blocks, tasks_due)
         return RecommendResponse(
             recommendation=recommendation,

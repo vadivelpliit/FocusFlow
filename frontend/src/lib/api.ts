@@ -1,3 +1,5 @@
+import { clearToken, getToken } from "./authStore";
+
 function getApiBase(): string {
   const raw = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   const trimmed = (typeof raw === "string" ? raw : "").trim();
@@ -58,17 +60,22 @@ async function fetchApi<T>(
       if (v != null && v !== "") url.searchParams.set(k, v);
     });
   }
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...(init?.headers as Record<string, string>) };
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
   let res: Response;
   try {
-    res = await fetch(url.toString(), {
-      ...init,
-      headers: { "Content-Type": "application/json", ...init.headers },
-    });
+    res = await fetch(url.toString(), { ...init, headers });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Network error";
     if (msg === "Failed to fetch" || msg.includes("fetch"))
       throw new Error("Cannot reach the API. Check that the backend is running and allows this origin (set CORS_ORIGINS to your site URL on Railway).");
     throw e;
+  }
+  if (res.status === 401) {
+    clearToken();
+    throw new Error("Unauthorized");
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -156,4 +163,30 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ date: dateStr }),
     }),
+
+  // Auth (no token required for login/register; token set on success)
+  auth: {
+    login: (emailOrUsername: string, password: string) =>
+      fetchApi<{ access_token: string; user: { id: number; email: string; username: string } }>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email_or_username: emailOrUsername, password }),
+      }),
+    register: (email: string, username: string, password: string) =>
+      fetchApi<{ access_token: string; user: { id: number; email: string; username: string } }>("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ email, username, password }),
+      }),
+    getMe: () =>
+      fetchApi<{ id: number; email: string; username: string }>("/auth/me"),
+    forgotPassword: (email: string) =>
+      fetchApi<{ message: string; reset_link?: string }>("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+    resetPassword: (token: string, newPassword: string) =>
+      fetchApi<{ message: string }>("/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ token, new_password: newPassword }),
+      }),
+  },
 };

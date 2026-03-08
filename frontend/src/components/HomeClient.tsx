@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "./AuthContext";
 import { Header } from "./Header";
 import { Tabs, type TabId } from "./Tabs";
 import { TaskList } from "./TaskList";
@@ -10,6 +11,7 @@ import { api } from "@/lib/api";
 import styles from "./HomeClient.module.css";
 
 export function HomeClient() {
+  const { user, logout } = useAuth();
   const [tab, setTab] = useState<TabId>("tasks");
   const [counts, setCounts] = useState({ total: 0, completed: 0 });
 
@@ -23,7 +25,12 @@ export function HomeClient() {
 
   return (
     <main className={styles.main}>
-      <Header completed={counts.completed} total={counts.total} />
+      <Header
+        completed={counts.completed}
+        total={counts.total}
+        username={user?.username}
+        onLogout={logout}
+      />
       <Tabs active={tab} onSelect={setTab} />
       <div className={styles.panel}>
         {tab === "tasks" && (
