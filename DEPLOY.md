@@ -22,9 +22,11 @@ Deploy the **backend first** so you have the API URL for the frontend.
 5. **Backend environment variables:**  
    In the **backend service** → **Variables**:
    - `DATABASE_URL` — from step 4 (PostgreSQL URL).
+   - `SECRET_KEY` — long random string for JWT (e.g. generate with `openssl rand -hex 32`). Required for auth.
    - `OPENAI_API_KEY` — your OpenAI API key (required for prioritize, chat, schedule).
    - (Optional) `OPENAI_MODEL` — e.g. `gpt-4o-mini` or `gpt-4o`.
    - (Optional) `CORS_ORIGINS` — leave empty for now; add your Vercel URL after step 2 below (e.g. `https://your-app.vercel.app`).
+   - (Optional) `FRONTEND_URL` — your Vercel app URL (for password-reset emails). SMTP vars optional (see `backend/.env.example`).
 
 6. **Start command:**  
    The repo has **`backend/railway.toml`** with the start command; push and redeploy. If you still see "No start command was found", set it in the dashboard: **Settings** → **Deploy** → **Start Command** → `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Alternatively, Railway can use the **Procfile** in `backend`:
@@ -99,7 +101,28 @@ Deploy the **backend first** so you have the API URL for the frontend.
 
 ---
 
+## Migration: existing database (auth)
+
+If your database was created **before** user auth was added (no `users` table, no `user_id` on tasks/schedule/day_logs), run the migration once so existing data is assigned to a default user.
+
+**Local (from repo root):**
+```bash
+cd backend
+pip install -r requirements.txt
+python -m scripts.migrate_auth
+```
+Ensure `backend/.env` has `DATABASE_URL` set (and optional `SECRET_KEY` for the app; migration only needs DB access).
+
+**Railway (existing Postgres):**  
+Either run the migration locally with `DATABASE_URL` set to your Railway Postgres URL (from **Variables** → copy the connection string), or use Railway’s **one-off run** / **shell** if available: set root to `backend`, then run `python -m scripts.migrate_auth`.
+
+After migration:
+- A default user is created: **email** `migrated@focusflow.local`, **password** `changeme`. Log in with these once, then change the password or create a new user and reassign data as needed.
+- All existing tasks, schedule blocks, schedule inputs, and day logs are linked to this user.
+
+---
+
 ## Local .env reference
 
-- **Backend** (`backend/.env`): `DATABASE_URL`, `OPENAI_API_KEY`, optional `OPENAI_MODEL`, optional `CORS_ORIGINS`.
+- **Backend** (`backend/.env`): `DATABASE_URL`, `SECRET_KEY`, `OPENAI_API_KEY`, optional `OPENAI_MODEL`, optional `CORS_ORIGINS`, optional `FRONTEND_URL` and SMTP for password reset.
 - **Frontend** (`frontend/.env.local`): `NEXT_PUBLIC_API_URL=http://localhost:8000` for local dev.
