@@ -81,7 +81,7 @@ def migrate(engine: Engine) -> None:
     if count == 0:
         print("Inserting default migration user (migrated@focusflow.local)...")
         from passlib.context import CryptContext
-        pwd = CryptContext(schemes=["bcrypt"], deprecated="auto").hash("changeme")
+        pwd = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__truncate_error=False).hash("changeme")
         run(engine, f"""
             INSERT INTO users (email, username, password_hash, is_active, created_at)
             VALUES ('migrated@focusflow.local', 'migrated', '{pwd}', 1, datetime('now'))
