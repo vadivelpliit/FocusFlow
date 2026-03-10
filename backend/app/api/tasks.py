@@ -26,10 +26,28 @@ def _run_prioritize(db: Session, user_id: int):
     tasks = get_tasks(db, user_id=user_id, completed=False)
     if not tasks:
         return 0
+    # Call LLM once for all tasks
     results = prioritize_tasks(tasks)
+    # Build lookup so we can respect existing manual settings
+    by_id = {t.id: t for t in tasks}
+    updated_count = 0
     for r in results:
-        update_task(db, r["task_id"], TaskUpdate(time_horizon=r["time_horizon"], importance=r["importance"]), user_id=user_id)
-    return len(results)
+        task = by_id.get(r["task_id"])
+        if not task:
+            continue
+        # If user already set importance or time_horizon, do NOT change it.
+        new_time_horizon = task.time_horizon if task.time_horizon is not None else r["time_horizon"]
+        new_importance = task.importance if task.importance is not None else r["importance"]
+        # Only write if something actually changes
+        if new_time_horizon != task.time_horizon or new_importance != task.importance:
+            update_task(
+                db,
+                r["task_id"],
+                TaskUpdate(time_horizon=new_time_horizon, importance=new_importance),
+                user_id=user_id,
+            )
+            updated_count += 1
+    return updated_count
 
 
 @router.get("", response_model=List[TaskResponse])

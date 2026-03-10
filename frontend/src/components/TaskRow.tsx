@@ -148,12 +148,21 @@ export function TaskRow({ task, onToggleComplete, onUpdate, onDelete }: TaskRowP
               </label>
               <label className={styles.field}>
                 Due date
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className={styles.input}
-                />
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className={styles.input}
+                  />
+                  <button
+                    type="button"
+                    className={styles.btnSecondary}
+                    onClick={() => setDueDate("")}
+                  >
+                    Clear
+                  </button>
+                </div>
               </label>
               <label className={styles.field}>
                 Frequency

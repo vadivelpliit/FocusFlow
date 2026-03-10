@@ -25,9 +25,6 @@ if not _cors_origins:
 _extra = [o + "/" for o in _cors_origins if o and not o.endswith("/")]
 _cors_origins = list(_cors_origins) + _extra
 
-# Log at startup so Railway deploy logs show CORS is loaded (env vars applied after redeploy)
-print("CORS allowed origins:", _cors_origins)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

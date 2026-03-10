@@ -76,12 +76,21 @@ export function AddTaskForm({ onCreated, onCancel }: AddTaskFormProps) {
       </label>
       <label className={styles.label}>
         Due date
-        <input
-          type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          className={styles.input}
-        />
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className={styles.input}
+          />
+          <button
+            type="button"
+            className={styles.smallBtn}
+            onClick={() => setDueDate("")}
+          >
+            Clear
+          </button>
+        </div>
       </label>
       <label className={styles.label}>
         Frequency
