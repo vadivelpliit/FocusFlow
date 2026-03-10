@@ -9,13 +9,15 @@ export function isDeadlineRisk(dueDate: string | null, daysThreshold = 7): boole
 }
 
 export const TIME_HORIZON_SECTIONS = [
-  { id: "urgent", label: "Urgent", horizons: ["focus_now", "focus_today"] },
-  { id: "important", label: "Important", horizons: ["focus_week", "focus_month"] },
-  { id: "someday", label: "Someday", horizons: ["focus_later"] },
+  // What you see in the app: focus buckets
+  { id: "focus_today", label: "Focus today", horizons: ["focus_now", "focus_today"] },
+  { id: "focus_week", label: "Focus this week", horizons: ["focus_week"] },
+  { id: "focus_month", label: "Focus this month", horizons: ["focus_month"] },
+  { id: "focus_later", label: "Focus later", horizons: ["focus_later", ""] },
 ] as const;
 
 export function getSectionForHorizon(horizon: string | null): string {
-  if (!horizon) return "someday";
+  if (!horizon) return "focus_later";
   const section = TIME_HORIZON_SECTIONS.find((s) => (s.horizons as readonly string[]).includes(horizon));
-  return section?.id ?? "someday";
+  return section?.id ?? "focus_later";
 }

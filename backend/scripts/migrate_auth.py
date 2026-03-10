@@ -131,6 +131,11 @@ def migrate(engine: Engine) -> None:
     elif column_exists(engine, "tasks", "user_id"):
         print("tasks.user_id already exists.")
 
+    # 4b. Add complexity to tasks
+    if table_exists(engine, "tasks") and not column_exists(engine, "tasks", "complexity"):
+        print("Adding complexity to tasks...")
+        run(engine, "ALTER TABLE tasks ADD COLUMN complexity VARCHAR(10)")
+
     # 5. Add user_id to schedule_blocks
     if table_exists(engine, "schedule_blocks") and not column_exists(engine, "schedule_blocks", "user_id"):
         print("Adding user_id to schedule_blocks...")

@@ -16,19 +16,20 @@ def _task_summary(task: Any) -> dict:
         "frequency": task.frequency,
         "comments": (task.comments or "")[:300],
         "tags": task.tags or [],
+        "complexity": getattr(task, "complexity", None),
     }
 
 
 def _build_prompt(tasks_summary: List[Dict]) -> str:
     tasks_json = json.dumps(tasks_summary, indent=2)
     return f"""You are a task prioritization assistant. Given a list of tasks, assign each task:
-1. time_horizon: one of focus_now, focus_today, focus_week, focus_month, focus_later
-   - focus_now: overdue or due today, or critical (e.g. financial/legal risk)
-   - focus_today: should be done today
-   - focus_week: should be done this week
-   - focus_month: this month
+1. time_horizon (Focus): one of focus_now, focus_today, focus_week, focus_month, focus_later
+   - focus_now / focus_today: overdue or due very soon, or critical (e.g. financial/legal risk)
+   - focus_week: should be worked on this week
+   - focus_month: should be moved forward this month
    - focus_later: no urgency (someday)
-2. importance: P1 (highest), P2 (medium), P3 (lower). Consider: financial impact if delayed, deadlines, how many steps (comments), and tags like "financial" or "urgent".
+2. importance (Priority / consequence): P1 (highest), P2 (medium), P3 (lower). Consider: financial impact if delayed, deadlines, how many steps (comments), and tags like "financial" or "urgent".
+3. complexity: small / medium / large (provided as "complexity"). For LARGE tasks with a deadline this month or next month, DO NOT leave them in focus_later until the last moment. Make sure they appear in focus_week or focus_today early enough that the user can make progress over multiple days.
 
 Return ONLY a valid JSON array of objects, one per task, with keys: task_id (number), time_horizon (string), importance (string).
 Example: [{{"task_id": 1, "time_horizon": "focus_today", "importance": "P1"}}, ...]

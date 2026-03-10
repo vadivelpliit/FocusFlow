@@ -6,20 +6,20 @@ import { isDeadlineRisk } from "@/lib/utils";
 import styles from "./TaskRow.module.css";
 
 const MOVE_OPTIONS: { label: string; time_horizon: string }[] = [
-  { label: "Move to Urgent", time_horizon: "focus_today" },
-  { label: "Move to Important", time_horizon: "focus_week" },
-  { label: "Move to Someday", time_horizon: "focus_later" },
+  { label: "Move to Focus today", time_horizon: "focus_today" },
+  { label: "Move to Focus this week", time_horizon: "focus_week" },
+  { label: "Move to Focus later", time_horizon: "focus_later" },
 ];
 
 const SECTION_LABELS: Record<string, string> = {
-  focus_now: "Focus now",
+  focus_now: "Focus today",
   focus_today: "Focus today",
   focus_week: "Focus this week",
   focus_month: "Focus this month",
   focus_later: "Focus later",
 };
 function sectionLabel(timeHorizon: string | null): string {
-  return (timeHorizon && SECTION_LABELS[timeHorizon]) || "Someday";
+  return (timeHorizon && SECTION_LABELS[timeHorizon]) || "Focus later";
 }
 
 interface TaskRowProps {
@@ -39,6 +39,7 @@ export function TaskRow({ task, onToggleComplete, onUpdate, onDelete }: TaskRowP
   const [dueDate, setDueDate] = useState(task.due_date || "");
   const [importance, setImportance] = useState(task.importance || "");
   const [timeHorizon, setTimeHorizon] = useState(task.time_horizon || "");
+  const [complexity, setComplexity] = useState(task.complexity || "");
   const deadlineRisk = isDeadlineRisk(task.due_date);
 
   useEffect(() => {
@@ -47,7 +48,8 @@ export function TaskRow({ task, onToggleComplete, onUpdate, onDelete }: TaskRowP
     setDueDate(task.due_date || "");
     setImportance(task.importance || "");
     setTimeHorizon(task.time_horizon || "");
-  }, [task.detail, task.comments, task.due_date, task.importance, task.time_horizon]);
+    setComplexity(task.complexity || "");
+  }, [task.detail, task.comments, task.due_date, task.importance, task.time_horizon, task.complexity]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -64,6 +66,7 @@ export function TaskRow({ task, onToggleComplete, onUpdate, onDelete }: TaskRowP
       due_date: dueDate || null,
       importance: importance || null,
       time_horizon: timeHorizon || null,
+      complexity: complexity || null,
     });
     setEditing(false);
   };
@@ -94,6 +97,9 @@ export function TaskRow({ task, onToggleComplete, onUpdate, onDelete }: TaskRowP
             ))}
             {task.importance && (
               <span className={styles.pill}>{task.importance}</span>
+            )}
+            {task.complexity && (
+              <span className={styles.pill}>{task.complexity}</span>
             )}
             {deadlineRisk && (
               <span className={styles.deadlineBadge}>DEADLINE RISK</span>
@@ -178,7 +184,7 @@ export function TaskRow({ task, onToggleComplete, onUpdate, onDelete }: TaskRowP
                 </select>
               </label>
               <label className={styles.field}>
-                Importance (P1 / P2 / P3)
+                Priority / consequence (P1 high, P2 medium, P3 low)
                 <select
                   value={importance}
                   onChange={(e) => setImportance(e.target.value)}
@@ -191,14 +197,26 @@ export function TaskRow({ task, onToggleComplete, onUpdate, onDelete }: TaskRowP
                 </select>
               </label>
               <label className={styles.field}>
+                Complexity
+                <select
+                  value={complexity}
+                  onChange={(e) => setComplexity(e.target.value)}
+                  className={styles.input}
+                >
+                  <option value="">—</option>
+                  <option value="small">Small</option>
+                  <option value="medium">Medium</option>
+                  <option value="large">Large</option>
+                </select>
+              </label>
+              <label className={styles.field}>
                 Focus (section)
                 <select
                   value={timeHorizon}
                   onChange={(e) => setTimeHorizon(e.target.value)}
                   className={styles.input}
                 >
-                  <option value="">Someday</option>
-                  <option value="focus_now">Focus now</option>
+                  <option value="">Focus later</option>
                   <option value="focus_today">Focus today</option>
                   <option value="focus_week">Focus this week</option>
                   <option value="focus_month">Focus this month</option>

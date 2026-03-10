@@ -10,7 +10,8 @@ class TaskBase(BaseModel):
     frequency: str = "once"
     comments: Optional[str] = None
     importance: Optional[str] = None  # P1, P2, P3
-    time_horizon: Optional[str] = None
+    time_horizon: Optional[str] = None  # focus_today, focus_week, focus_month, focus_later
+    complexity: Optional[str] = None  # small, medium, large
     tags: Optional[List[str]] = None
 
 
@@ -25,6 +26,7 @@ class TaskUpdate(BaseModel):
     comments: Optional[str] = None
     importance: Optional[str] = None
     time_horizon: Optional[str] = None
+    complexity: Optional[str] = None
     tags: Optional[List[str]] = None
     completed: Optional[bool] = None
 

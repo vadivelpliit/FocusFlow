@@ -35,8 +35,9 @@ class Task(Base):
     due_date = Column(Date, nullable=True)
     frequency = Column(String(20), default="once")  # once, daily, weekly, monthly
     comments = Column(Text, nullable=True)  # next steps / notes
-    importance = Column(String(10), nullable=True)  # P1, P2, P3
-    time_horizon = Column(String(20), nullable=True)  # focus_now, focus_today, focus_week, focus_month, focus_later
+    importance = Column(String(10), nullable=True)  # P1, P2, P3 (priority / consequence)
+    time_horizon = Column(String(20), nullable=True)  # focus_today, focus_week, focus_month, focus_later
+    complexity = Column(String(10), nullable=True)  # small, medium, large
     tags = Column(JSON, nullable=True)  # list of strings e.g. ["financial", "call"]
     completed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

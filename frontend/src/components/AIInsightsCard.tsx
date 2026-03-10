@@ -18,7 +18,7 @@ export function AIInsightsCard({ onPrioritize, onChatClick }: AIInsightsCardProp
     setMessage(null);
     try {
       await onPrioritize();
-      setMessage("Priorities updated. Tasks are now in Urgent / Important / Someday with P1–P3.");
+      setMessage("Priorities updated. Tasks now have Focus (today / week / month / later) and P1–P3 priority.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Prioritization failed");
     } finally {
@@ -42,7 +42,7 @@ export function AIInsightsCard({ onPrioritize, onChatClick }: AIInsightsCardProp
       {!collapsed && (
         <div className={styles.body}>
           <p className={styles.description}>
-            Let AI assign priorities based on due dates, financial impact, and effort. Tasks will be placed in Urgent, Important, or Someday and given P1–P3.
+            Let AI assign priorities based on due dates, financial impact, and effort. Tasks will be placed into Focus today / this week / this month / later and given P1–P3.
           </p>
           {message && (
             <p className={message.startsWith("Priorities") ? styles.success : styles.error}>

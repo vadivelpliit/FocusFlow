@@ -20,6 +20,7 @@ export function AddTaskForm({ onCreated, onCancel }: AddTaskFormProps) {
   const [comments, setComments] = useState("");
   const [importance, setImportance] = useState<string>("");
   const [timeHorizon, setTimeHorizon] = useState<string>("");
+  const [complexity, setComplexity] = useState<string>("");
   const [tags, setTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState("");
   const [saving, setSaving] = useState(false);
@@ -48,6 +49,7 @@ export function AddTaskForm({ onCreated, onCancel }: AddTaskFormProps) {
         due_date: dueDate || null,
         frequency,
         comments: comments.trim() || null,
+          complexity: complexity || null,
         tags: tags.length ? tags : null,
       };
       if (importance) payload.importance = importance;
@@ -107,7 +109,7 @@ export function AddTaskForm({ onCreated, onCancel }: AddTaskFormProps) {
         </select>
       </label>
       <label className={styles.label}>
-        Importance (P1/P2/P3)
+        Priority / consequence (P1 high, P2 medium, P3 low)
         <select
           value={importance}
           onChange={(e) => setImportance(e.target.value)}
@@ -117,6 +119,19 @@ export function AddTaskForm({ onCreated, onCancel }: AddTaskFormProps) {
           <option value="P1">P1</option>
           <option value="P2">P2</option>
           <option value="P3">P3</option>
+        </select>
+      </label>
+      <label className={styles.label}>
+        Complexity
+        <select
+          value={complexity}
+          onChange={(e) => setComplexity(e.target.value)}
+          className={styles.input}
+        >
+          <option value="">—</option>
+          <option value="small">Small</option>
+          <option value="medium">Medium</option>
+          <option value="large">Large</option>
         </select>
       </label>
       <label className={styles.label}>
