@@ -136,18 +136,26 @@ export function AddTaskForm({ onCreated, onCancel }: AddTaskFormProps) {
       </label>
       <label className={styles.label}>
         Focus (time horizon)
-        <select
-          value={timeHorizon}
-          onChange={(e) => setTimeHorizon(e.target.value)}
-          className={styles.input}
-        >
-          <option value="">—</option>
-          <option value="focus_now">Focus now</option>
-          <option value="focus_today">Focus today</option>
-          <option value="focus_week">Focus this week</option>
-          <option value="focus_month">Focus this month</option>
-          <option value="focus_later">Focus later</option>
-        </select>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <select
+            value={timeHorizon}
+            onChange={(e) => setTimeHorizon(e.target.value)}
+            className={styles.input}
+          >
+            <option value="">—</option>
+            <option value="focus_today">Focus today</option>
+            <option value="focus_week">Focus this week</option>
+            <option value="focus_month">Focus this month</option>
+            <option value="focus_later">Focus later</option>
+          </select>
+          <button
+            type="button"
+            className={styles.smallBtn}
+            onClick={() => setTimeHorizon("")}
+          >
+            Clear
+          </button>
+        </div>
       </label>
       <label className={styles.label}>
         Tags

@@ -211,17 +211,26 @@ export function TaskRow({ task, onToggleComplete, onUpdate, onDelete }: TaskRowP
               </label>
               <label className={styles.field}>
                 Focus (section)
-                <select
-                  value={timeHorizon}
-                  onChange={(e) => setTimeHorizon(e.target.value)}
-                  className={styles.input}
-                >
-                  <option value="">Focus later</option>
-                  <option value="focus_today">Focus today</option>
-                  <option value="focus_week">Focus this week</option>
-                  <option value="focus_month">Focus this month</option>
-                  <option value="focus_later">Focus later</option>
-                </select>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <select
+                    value={timeHorizon}
+                    onChange={(e) => setTimeHorizon(e.target.value)}
+                    className={styles.input}
+                  >
+                    <option value="">Let AI decide</option>
+                    <option value="focus_today">Focus today</option>
+                    <option value="focus_week">Focus this week</option>
+                    <option value="focus_month">Focus this month</option>
+                    <option value="focus_later">Focus later</option>
+                  </select>
+                  <button
+                    type="button"
+                    className={styles.btnSecondary}
+                    onClick={() => setTimeHorizon("")}
+                  >
+                    Clear
+                  </button>
+                </div>
               </label>
               <label className={styles.field}>
                 Comments / Next steps

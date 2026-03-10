@@ -28,15 +28,16 @@ def _run_prioritize(db: Session, user_id: int):
         return 0
     # Call LLM once for all tasks
     results = prioritize_tasks(tasks)
-    # Build lookup so we can respect existing manual settings
+    # Build lookup so we can respect existing manual priority settings
     by_id = {t.id: t for t in tasks}
     updated_count = 0
     for r in results:
         task = by_id.get(r["task_id"])
         if not task:
             continue
-        # If user already set importance or time_horizon, do NOT change it.
-        new_time_horizon = task.time_horizon if task.time_horizon is not None else r["time_horizon"]
+        # Allow AI to always adjust focus (time_horizon) as time passes,
+        # but do NOT overwrite an explicit manual importance if it's already set.
+        new_time_horizon = r["time_horizon"]
         new_importance = task.importance if task.importance is not None else r["importance"]
         # Only write if something actually changes
         if new_time_horizon != task.time_horizon or new_importance != task.importance:
