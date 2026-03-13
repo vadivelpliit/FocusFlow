@@ -103,22 +103,18 @@ Deploy the **backend first** so you have the API URL for the frontend.
 
 ## Migration: existing database (auth)
 
-If your database was created **before** user auth was added (no `users` table, no `user_id` on tasks/schedule/day_logs), run the migration once so existing data is assigned to a default user.
+**Migrations run automatically** when the backend starts. On every deploy (e.g. push to `main`), the app runs migrations after creating tables: it adds `users`, `password_reset_tokens`, `user_id` on tasks/schedule/day_logs, and any new columns like `complexity` and `reasoning`. You don’t need to run anything extra.
 
-**Local (from repo root):**
+**Optional manual run:** from the `backend` directory you can still run:
 ```bash
 cd backend
-pip install -r requirements.txt
 python -m scripts.migrate_auth
 ```
-Ensure `backend/.env` has `DATABASE_URL` set (and optional `SECRET_KEY` for the app; migration only needs DB access).
+Use this if you want to apply migrations without starting the server (e.g. one-off against a production DB from your machine).
 
-**Railway (existing Postgres):**  
-Either run the migration locally with `DATABASE_URL` set to your Railway Postgres URL (from **Variables** → copy the connection string), or use Railway’s **one-off run** / **shell** if available: set root to `backend`, then run `python -m scripts.migrate_auth`.
-
-After migration:
-- A default user is created: **email** `migrated@focusflow.local`, **password** `changeme`. Log in with these once, then change the password or create a new user and reassign data as needed.
-- All existing tasks, schedule blocks, schedule inputs, and day logs are linked to this user.
+After migration (automatic or manual):
+- If the `users` table is empty, a default user is created: **email** `migrated@focusflow.local`, **password** `changeme`. Log in once, then change the password or create a new user.
+- Existing tasks, schedule blocks, schedule inputs, and day logs are linked to that default user.
 
 ---
 

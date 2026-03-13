@@ -39,15 +39,19 @@ def _run_prioritize(db: Session, user_id: int):
         # but do NOT overwrite an explicit manual importance if it's already set.
         new_time_horizon = r["time_horizon"]
         new_importance = task.importance if task.importance is not None else r["importance"]
-        # Only write if something actually changes
-        if new_time_horizon != task.time_horizon or new_importance != task.importance:
-            update_task(
-                db,
-                r["task_id"],
-                TaskUpdate(time_horizon=new_time_horizon, importance=new_importance),
-                user_id=user_id,
-            )
-            updated_count += 1
+        reasoning = r.get("reasoning")
+        # Update task with new focus, priority, and AI reasoning (so user sees why it was placed here)
+        update_task(
+            db,
+            r["task_id"],
+            TaskUpdate(
+                time_horizon=new_time_horizon,
+                importance=new_importance,
+                reasoning=reasoning,
+            ),
+            user_id=user_id,
+        )
+        updated_count += 1
     return updated_count
 
 

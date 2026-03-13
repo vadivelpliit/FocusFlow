@@ -22,19 +22,35 @@ def _task_summary(task: Any) -> dict:
 
 def _build_prompt(tasks_summary: List[Dict]) -> str:
     tasks_json = json.dumps(tasks_summary, indent=2)
-    return f"""You are a task prioritization assistant. Given a list of tasks, assign each task:
-1. time_horizon (Focus): one of focus_now, focus_today, focus_week, focus_month, focus_later
-   - focus_now / focus_today: overdue or due very soon, or critical (e.g. financial/legal risk)
-   - focus_week: should be worked on this week
-   - focus_month: should be moved forward this month
-   - focus_later: no urgency (someday)
-2. importance (Priority / consequence): P1 (highest), P2 (medium), P3 (lower). Consider: financial impact if delayed, deadlines, how many steps (comments), and tags like "financial" or "urgent".
-3. complexity: small / medium / large (provided as "complexity"). For LARGE tasks with a deadline this month or next month, DO NOT leave them in focus_later until the last moment. Make sure they appear in focus_week or focus_today early enough that the user can make progress over multiple days.
+    return f"""### Role
+You are a High-Performance Executive Assistant specializing in Cognitive Load Management. Your goal is to organize the user's backlog into a realistic, high-impact schedule.
 
-Return ONLY a valid JSON array of objects, one per task, with keys: task_id (number), time_horizon (string), importance (string).
-Example: [{{"task_id": 1, "time_horizon": "focus_today", "importance": "P1"}}, ...]
+### Step 1: Reality-Check Evaluation
+Before assigning horizons, analyze each task's "True Urgency":
+- **Domain Lead-Time:** Use your world knowledge. (e.g., Taxes, Medical Appointments, or Large Projects require 3-4 weeks of lead time). If the "Start Date" is now, treat it as urgent.
+- **Risk Multiplier:** Any task tagged "health," "financial," or "legal" automatically jumps one priority level (P2 becomes P1) and moves closer in time horizon.
+- **The "Rot" Factor:** For tasks with no due_date, assign a "Virtual Deadline" based on importance. High-importance items without dates MUST NOT stay in focus_later for more than 7 days.
 
-Tasks:
+### Step 2: The "Cognitive Budget" (Slot Filling)
+You must distribute tasks to prevent burnout while ensuring progress.
+- **Focus_Today Budget:** Max 1 "Large" task + 2 "Small" tasks, OR 3 "Medium" tasks. Total "Complexity" should not exceed a "5-point" limit (Large=3, Medium=2, Small=1).
+- **The "Large" Progress Rule:** If a task is LARGE and due within 21 days, it MUST have a presence in focus_today or focus_week to ensure incremental progress.
+- **The "Squeeze-In" Rule:** If the today/week buckets are full of Large tasks, prioritize adding a "Small" high-priority task rather than another Large one.
+
+### Step 3: Horizon Definitions
+1. focus_now/today: Immediate risks (financial/health), tasks starting today based on lead-time, or "Quick Wins" (Small complexity) to build momentum.
+2. focus_week: Heavy lifting. Large projects requiring multiple days of effort.
+3. focus_month: Preparatory tasks and medium-term milestones.
+4. focus_later: Low-priority, low-risk, or "Someday" ideas.
+
+### Output Requirements
+- Respect existing 'importance' or 'complexity' if already set by the user.
+- RETURN ONLY a valid JSON array of objects.
+- Keys: task_id (number), time_horizon (string), importance (string), reasoning (string - a short 10-word explanation of why it was placed here).
+
+Example: [{{"task_id": 1, "time_horizon": "focus_today", "importance": "P1", "reasoning": "Tax deadline in 2 weeks; financial risk."}}, ...]
+
+### Tasks to Process:
 {tasks_json}"""
 
 
@@ -56,11 +72,12 @@ def _parse_response(text: str, task_ids: Set[int]) -> List[Dict]:
             continue
         th = item.get("time_horizon")
         imp = item.get("importance")
+        reasoning = (item.get("reasoning") or "").strip() or None
         if th not in VALID_TIME_HORIZONS:
             th = "focus_later"
         if imp not in VALID_IMPORTANCE:
             imp = "P2"
-        result.append({"task_id": int(tid), "time_horizon": th, "importance": imp})
+        result.append({"task_id": int(tid), "time_horizon": th, "importance": imp, "reasoning": reasoning})
     return result
 
 

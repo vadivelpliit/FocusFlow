@@ -12,6 +12,7 @@ class TaskBase(BaseModel):
     importance: Optional[str] = None  # P1, P2, P3
     time_horizon: Optional[str] = None  # focus_today, focus_week, focus_month, focus_later
     complexity: Optional[str] = None  # small, medium, large
+    reasoning: Optional[str] = None  # AI explanation from last Prioritize run
     tags: Optional[List[str]] = None
 
 
@@ -27,6 +28,7 @@ class TaskUpdate(BaseModel):
     importance: Optional[str] = None
     time_horizon: Optional[str] = None
     complexity: Optional[str] = None
+    reasoning: Optional[str] = None
     tags: Optional[List[str]] = None
     completed: Optional[bool] = None
 

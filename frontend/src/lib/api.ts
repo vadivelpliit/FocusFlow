@@ -17,7 +17,8 @@ export interface Task {
   comments: string | null;
   importance: string | null;
   time_horizon: string | null;
-   complexity: string | null;
+  complexity: string | null;
+  reasoning: string | null;
   tags: string[] | null;
   completed: boolean;
   created_at: string;
@@ -32,6 +33,7 @@ export interface TaskCreate {
   importance?: string | null;
   time_horizon?: string | null;
   complexity?: string | null;
+  reasoning?: string | null;
   tags?: string[] | null;
 }
 
@@ -43,6 +45,7 @@ export interface TaskUpdate {
   importance?: string | null;
   time_horizon?: string | null;
   complexity?: string | null;
+  reasoning?: string | null;
   tags?: string[] | null;
   completed?: boolean;
 }

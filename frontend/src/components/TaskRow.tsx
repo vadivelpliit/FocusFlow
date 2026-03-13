@@ -267,6 +267,11 @@ export function TaskRow({ task, onToggleComplete, onUpdate, onDelete }: TaskRowP
                 {task.importance && <span><strong>Priority:</strong> {task.importance}</span>}
                 <span><strong>Section:</strong> {sectionLabel(task.time_horizon)}</span>
               </div>
+              {task.reasoning && (
+                <div className={styles.reasoning}>
+                  <strong>Why AI placed this here:</strong> {task.reasoning}
+                </div>
+              )}
               {task.comments && (
                 <div className={styles.comments}>
                   <strong>Next steps:</strong>

@@ -29,6 +29,8 @@ _cors_origins = list(_cors_origins) + _extra
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    from .migrate import run_migrations
+    run_migrations(engine)
     yield
 
 

@@ -161,6 +161,16 @@
   color: var(--gray-400);
 }
 
+.reasoning {
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--gray-400);
+}
+
+.reasoning strong {
+  color: var(--teal);
+}
+
 .comments {
   margin-bottom: 0.75rem;
   font-size: 0.85rem;
