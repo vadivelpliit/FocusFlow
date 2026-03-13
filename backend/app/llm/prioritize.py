@@ -16,6 +16,7 @@ def _task_summary(task: Any) -> dict:
         "frequency": task.frequency,
         "comments": (task.comments or "")[:300],
         "tags": task.tags or [],
+        "importance": getattr(task, "importance", None),
         "complexity": getattr(task, "complexity", None),
     }
 
@@ -24,6 +25,9 @@ def _build_prompt(tasks_summary: List[Dict]) -> str:
     tasks_json = json.dumps(tasks_summary, indent=2)
     return f"""### Role
 You are a High-Performance Executive Assistant specializing in Cognitive Load Management. Your goal is to organize the user's backlog into a realistic, high-impact schedule.
+
+### Inputs to Use
+For each task, use: "detail" (what the task is), "comments" (next steps, progress notes, or context the user added), and—when present—"importance" (P1/P2/P3) and "complexity" (small/medium/large). Detail and comments tell you what the task is and where the user stands; importance and complexity, when set, should inform your time_horizon and reasoning. Use all of these to decide time_horizon, importance, and reasoning.
 
 ### Step 1: Reality-Check Evaluation
 Before assigning horizons, analyze each task's "True Urgency":
