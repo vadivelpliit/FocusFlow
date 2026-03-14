@@ -16,6 +16,7 @@ VALID_TIME_HORIZONS = {
     "focus_later",
 }
 VALID_IMPORTANCE = {"P1", "P2", "P3"}
+VALID_COMPLEXITY = {"small", "medium", "large"}
 
 
 def _task_summary(task: Any) -> dict:
@@ -58,26 +59,32 @@ For all items without a due date, use their **Rank (1-5)** and **Importance (P1-
 - **Risk Multiplier:** Health/Financial tasks bypass the budget and go to Week 1 immediately.
 
 ### Inputs to Use
-For each task use: detail, comments, due_date, tags, importance (P1/P2/P3), complexity (small/medium/large), and rank (1-5 when present).
+For each task use: detail, comments, due_date, tags, importance (P1/P2/P3), complexity (small/medium/large), and rank (1-5 when present). If importance or complexity is missing, infer it from the task (e.g. first-time US tax = large; quick call = small).
 
 ### Output Format (Strict JSON Array)
 - Reply with ONLY a JSON array of arrays. No markdown, no explanation.
-- Format: [[task_id, time_horizon, importance, reasoning]]
+- Format: [[task_id, time_horizon, importance, complexity]]
 - time_horizon: one of focus_today, focus_week_1, focus_week_2, focus_week_3, focus_week_4, focus_later
 - importance: P1, P2, or P3
-- reasoning: one short phrase (no quotes inside)
-- One row per task below. Do not truncate.
+- complexity: small, medium, or large
+- One row per task. Keep responses short to avoid truncation.
 
-Example: [[7, "focus_week_2", "P1", "Start date in week 2"], [8, "focus_today", "P1", "Health task Week 1"]]
+Example: [[7, "focus_week_2", "P1", "large"], [8, "focus_today", "P1", "small"]]
 
 ### Tasks to Process:
 {tasks_json}"""
 
 
 def _normalize_json_string(s: str) -> str:
-    """Remove trailing commas and other common invalid JSON that LLMs sometimes emit."""
+    """Remove trailing commas and fix truncated JSON that LLMs sometimes emit."""
     s = re.sub(r",\s*}", "}", s)
     s = re.sub(r",\s*]", "]", s)
+    # Handle truncated response: ends with "," or ", " but no closing "]"
+    s = re.sub(r",\s*$", "", s)
+    if s.rstrip() and not s.rstrip().endswith("]"):
+        s = s.rstrip()
+        if s.startswith("["):
+            s = s + "]"
     return s
 
 
@@ -89,8 +96,9 @@ def _parse_response(text: str, task_ids: Set[int]) -> List[Dict]:
     match = re.search(r"\[[\s\S]*\]", text)
     if match:
         text = match.group(0)
+    # Normalize trailing commas and truncated arrays before parsing
+    text = _normalize_json_string(text)
     logger.debug("Prioritize parse input (extracted array, length=%d): %s", len(text), text)
-    # Try parsing; if it fails, try again after removing trailing commas
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
@@ -105,17 +113,16 @@ def _parse_response(text: str, task_ids: Set[int]) -> List[Dict]:
         raise ValueError("Expected JSON array")
     result = []
     for item in data:
-        # Compact format: [task_id, time_horizon, importance, reasoning]
+        # Compact format: [task_id, time_horizon, importance, complexity]
         if isinstance(item, list) and len(item) >= 4:
-            tid, th, imp, reasoning = item[0], item[1], item[2], item[3]
+            tid, th, imp, complexity = item[0], item[1], item[2], item[3]
             tid = int(tid) if tid is not None else None
-            reasoning = (str(reasoning).strip() or None) if reasoning is not None else None
-        # Legacy object format
+            complexity = (str(complexity).strip().lower() if complexity else None) or None
         elif isinstance(item, dict):
             tid = item.get("task_id")
             th = item.get("time_horizon")
             imp = item.get("importance")
-            reasoning = (item.get("reasoning") or "").strip() or None
+            complexity = (item.get("complexity") or "").strip().lower() or None
         else:
             continue
         if tid is None or int(tid) not in task_ids:
@@ -126,12 +133,14 @@ def _parse_response(text: str, task_ids: Set[int]) -> List[Dict]:
             th = "focus_later"
         if imp not in VALID_IMPORTANCE:
             imp = "P2"
-        result.append({"task_id": int(tid), "time_horizon": th, "importance": imp, "reasoning": reasoning})
+        if complexity not in VALID_COMPLEXITY:
+            complexity = None
+        result.append({"task_id": int(tid), "time_horizon": th, "importance": imp, "complexity": complexity})
     return result
 
 
 def prioritize_tasks(tasks: list) -> List[Dict]:
-    """Call LLM to get time_horizon and importance for each task. Returns list of { task_id, time_horizon, importance }."""
+    """Call LLM to get time_horizon, importance, and complexity per task. Returns list of { task_id, time_horizon, importance, complexity }."""
     if not tasks:
         return []
     summary = [_task_summary(t) for t in tasks]
