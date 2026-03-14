@@ -117,5 +117,7 @@ def prioritize_tasks(tasks: list) -> List[Dict]:
     prompt = _build_prompt(summary)
     response = complete(prompt, json_mode=True)
     logger.info("Prioritize LLM raw response (length=%d): %s", len(response), response)
+    # Always print so it shows in Railway Deploy logs
+    print(f"[Prioritize] LLM raw response (length={len(response)}): {response!r}", flush=True)
     task_ids = {t.id for t in tasks}
     return _parse_response(response, task_ids)
