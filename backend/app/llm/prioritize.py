@@ -49,7 +49,7 @@ You must distribute tasks to prevent burnout while ensuring progress.
 
 ### Output Requirements
 - Respect existing 'importance' or 'complexity' if already set by the user.
-- RETURN ONLY a valid JSON array of objects.
+- Reply with ONLY a valid JSON array of objects. No markdown, no code fences, no explanation before or after.
 - Keys: task_id (number), time_horizon (string), importance (string), reasoning (string - a short 10-word explanation of why it was placed here).
 
 Example: [{{"task_id": 1, "time_horizon": "focus_today", "importance": "P1", "reasoning": "Tax deadline in 2 weeks; financial risk."}}, ...]
@@ -59,12 +59,20 @@ Example: [{{"task_id": 1, "time_horizon": "focus_today", "importance": "P1", "re
 
 
 def _parse_response(text: str, task_ids: Set[int]) -> List[Dict]:
-    text = text.strip()
-    # Try to extract JSON array (in case LLM wraps in markdown)
+    text = (text or "").strip()
+    if not text:
+        raise ValueError("LLM returned empty response. Try again or check the model is available.")
+    # Try to extract JSON array (in case LLM wraps in markdown or adds prose)
     match = re.search(r"\[[\s\S]*\]", text)
     if match:
         text = match.group(0)
-    data = json.loads(text)
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        raise ValueError(
+            f"LLM response was not valid JSON: {e}. "
+            "The model may have returned plain text or an error. Try again."
+        ) from e
     if not isinstance(data, list):
         raise ValueError("Expected JSON array")
     result = []
