@@ -22,14 +22,14 @@ def _get_provider() -> str:
     )
 
 
-def complete(prompt: str, *, max_tokens: int = 2000) -> str:
+def complete(prompt: str, *, max_tokens: int = 2000, json_mode: bool = False) -> str:
     provider = _get_provider()
     if provider == "gemini":
-        return _complete_gemini(prompt, max_tokens=max_tokens)
+        return _complete_gemini(prompt, max_tokens=max_tokens, json_mode=json_mode)
     return _complete_openai(prompt, max_tokens=max_tokens)
 
 
-def _complete_gemini(prompt: str, *, max_tokens: int = 2000) -> str:
+def _complete_gemini(prompt: str, *, max_tokens: int = 2000, json_mode: bool = False) -> str:
     global _gemini_client
     from google import genai
     from google.genai import types
@@ -39,18 +39,24 @@ def _complete_gemini(prompt: str, *, max_tokens: int = 2000) -> str:
         _gemini_client = genai.Client(api_key=api_key)
     client = _gemini_client
     model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-    config = types.GenerateContentConfig(
-        max_output_tokens=max_tokens,
-        temperature=0.3,
-    )
+    config_kw: dict = {
+        "max_output_tokens": max_tokens,
+        "temperature": 0.3,
+    }
+    if json_mode:
+        config_kw["response_mime_type"] = "application/json"
+    config = types.GenerateContentConfig(**config_kw)
     response = client.models.generate_content(
         model=model,
         contents=prompt,
         config=config,
     )
-    if not response or not response.text:
+    if not response:
         raise ValueError("Empty response from LLM")
-    return response.text.strip()
+    out = (response.text or "").strip()
+    if not out:
+        raise ValueError("Empty response from LLM (no or whitespace-only content)")
+    return out
 
 
 def _complete_openai(prompt: str, *, max_tokens: int = 2000) -> str:
@@ -70,7 +76,10 @@ def _complete_openai(prompt: str, *, max_tokens: int = 2000) -> str:
     )
     if not response.choices:
         raise ValueError("Empty response from LLM")
-    return (response.choices[0].message.content or "").strip()
+    out = (response.choices[0].message.content or "").strip()
+    if not out:
+        raise ValueError("Empty response from LLM (no or whitespace-only content)")
+    return out
 
 
 def get_configured_provider() -> Optional[str]:

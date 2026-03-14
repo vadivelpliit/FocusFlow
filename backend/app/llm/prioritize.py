@@ -99,6 +99,6 @@ def prioritize_tasks(tasks: list) -> List[Dict]:
         return []
     summary = [_task_summary(t) for t in tasks]
     prompt = _build_prompt(summary)
-    response = complete(prompt)
+    response = complete(prompt, json_mode=True)
     task_ids = {t.id for t in tasks}
     return _parse_response(response, task_ids)
