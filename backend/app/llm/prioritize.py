@@ -1,6 +1,16 @@
+"""
+Prioritize: LLM assigns time_horizon, importance, complexity per task.
+
+Mapping (LLM → UI):
+- LLM returns: focus_today | focus_week_1 | focus_week_2 | focus_week_3 | focus_week_4 | focus_later
+- Backend stores that value in task.time_horizon.
+- API (TaskResponse) normalizes legacy on read only: focus_week→focus_week_1, focus_now→focus_today, focus_month→focus_week_2.
+- Frontend utils.TIME_HORIZON_SECTIONS maps each horizon to a section label (Focus today, Focus week 1, …).
+"""
 import json
 import logging
 import re
+from datetime import date
 from typing import Any, Dict, List, Set
 
 from .client import complete
@@ -35,41 +45,40 @@ def _task_summary(task: Any) -> dict:
 
 def _build_prompt(tasks_summary: List[Dict]) -> str:
     tasks_json = json.dumps(tasks_summary, indent=2)
+    today = date.today().isoformat()
     return f"""### Role
 You are a High-Performance Executive Assistant specializing in Capacity Planning. You manage a strict **5-Point Weekly Velocity** (Large=3, Medium=2, Small=1).
 
+**Today's date:** {today}
+- Week 1 = days 0-6 from today, Week 2 = days 7-13, Week 3 = days 14-20, Week 4 = days 21-27.
+
 ### Step 1: Fixed Commitment Slotting (Tasks WITH Due Dates)
-Calculate the **Start Date** (Due Date minus Buffer: Large=30d, Medium=14d, Small=7d).
-- Assign these to the earliest applicable week (Week 1, 2, 3, or 4) based on the Start Date.
-- These tasks take priority in the 5-point budget.
+Calculate **Start Date** = Due Date minus Buffer (Large=30d, Medium=14d, Small=7d). Assign to the week that contains that Start Date:
+- Start Date in Week 1 → use focus_today (if top 1-2 for today) or **focus_week_1**
+- Start Date in Week 2 → **focus_week_2**
+- Start Date in Week 3 → **focus_week_3**
+- Start Date in Week 4 → **focus_week_4**
+- Start Date after Week 4 or no due date and low priority → **focus_later**
+You MUST use focus_week_2, focus_week_3, focus_week_4 when the Start Date falls in those weeks; do not put everything in focus_week_1.
 
 ### Step 2: Backlog Injection (Tasks WITHOUT Due Dates)
-For all items without a due date, use their **Rank (1-5)** and **Importance (P1-P3)**:
-- Look for "Open Slots" in the 5-point budget for Week 1.
-- Fill slots in order: P1 (Rank 1 -> 5), then P2 (Rank 1 -> 5).
-- If Week 1 is full, move to Week 2, and so on.
+Fill the 5-point budget per week. Week 1 first (P1 then P2 by rank), then Week 2, 3, 4. Assign **focus_week_1**, **focus_week_2**, **focus_week_3**, or **focus_week_4** so tasks are spread across weeks. Never put all tasks in focus_week_1.
 
-### Step 3: Horizon Definitions
-1. **focus_today:** The top 1-2 items from Week 1 (Total max 5 points for the week).
-2. **focus_week_1 / focus_week_2 / focus_week_3 / focus_week_4:** Tasks assigned to these specific 7-day windows.
-3. **focus_later:** Anything that doesn't fit in the next 4 weeks or has P3 importance.
+### Step 3: Horizon Definitions (use these exact strings)
+- **focus_today:** Top 1-2 items for today only (max 5 points total for Week 1).
+- **focus_week_1** / **focus_week_2** / **focus_week_3** / **focus_week_4:** Task belongs in that calendar week.
+- **focus_later:** Does not fit in the next 4 weeks or P3 importance.
 
 ### Step 4: Cognitive Guardrails
-- **Max Points:** Never exceed 5 points in any single week bucket.
-- **Risk Multiplier:** Health/Financial tasks bypass the budget and go to Week 1 immediately.
-
-### Inputs to Use
-For each task use: detail, comments, due_date, tags, importance (P1/P2/P3), complexity (small/medium/large), and rank (1-5 when present). If importance or complexity is missing, infer it from the task (e.g. first-time US tax = large; quick call = small).
+- Max 5 complexity points per week. Risk (health/financial) → Week 1 (focus_today or focus_week_1).
 
 ### Output Format (Strict JSON Array)
-- Reply with ONLY a JSON array of arrays. No markdown, no explanation.
+- ONLY a JSON array of arrays. No markdown. No explanation.
 - Format: [[task_id, time_horizon, importance, complexity]]
-- time_horizon: one of focus_today, focus_week_1, focus_week_2, focus_week_3, focus_week_4, focus_later
-- importance: P1, P2, or P3
-- complexity: small, medium, or large
-- One row per task. Keep responses short to avoid truncation.
+- time_horizon: exactly one of focus_today, focus_week_1, focus_week_2, focus_week_3, focus_week_4, focus_later
+- Spread tasks across focus_week_1, focus_week_2, focus_week_3, focus_week_4 where appropriate.
 
-Example: [[7, "focus_week_2", "P1", "large"], [8, "focus_today", "P1", "small"]]
+Example: [[1, "focus_today", "P1", "small"], [2, "focus_week_1", "P2", "medium"], [3, "focus_week_2", "P1", "large"], [4, "focus_later", "P3", "small"]]
 
 ### Tasks to Process:
 {tasks_json}"""
