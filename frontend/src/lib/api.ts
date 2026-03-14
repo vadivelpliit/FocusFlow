@@ -129,9 +129,23 @@ export const api = {
   deleteTask: (id: number) =>
     fetchApi<void>(`/tasks/${id}`, { method: "DELETE" }),
 
-  /** Run LLM to assign time_horizon and importance to all incomplete tasks. */
-  prioritize: () =>
-    fetchApi<{ updated: number }>("/tasks/prioritize", { method: "POST" }),
+  /** Run LLM to assign time_horizon and importance to all incomplete tasks. 2min timeout so loading state always clears. */
+  prioritize: async (): Promise<{ updated: number }> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120_000);
+    try {
+      return await fetchApi<{ updated: number }>("/tasks/prioritize", {
+        method: "POST",
+        signal: controller.signal,
+      });
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError")
+        throw new Error("Prioritization timed out (2 min). Try again.");
+      throw e;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  },
 
   /** Send a message to AI chat; returns suggestions based on tasks. */
   chat: (message: string) =>

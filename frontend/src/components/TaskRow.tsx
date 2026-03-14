@@ -15,6 +15,10 @@ const SECTION_LABELS: Record<string, string> = {
   focus_now: "Focus today",
   focus_today: "Focus today",
   focus_week: "Focus this week",
+  focus_week_1: "Focus week 1",
+  focus_week_2: "Focus week 2",
+  focus_week_3: "Focus week 3",
+  focus_week_4: "Focus week 4",
   focus_month: "Focus this month",
   focus_later: "Focus later",
 };
@@ -219,8 +223,10 @@ export function TaskRow({ task, onToggleComplete, onUpdate, onDelete }: TaskRowP
                   >
                     <option value="">Let AI decide</option>
                     <option value="focus_today">Focus today</option>
-                    <option value="focus_week">Focus this week</option>
-                    <option value="focus_month">Focus this month</option>
+                    <option value="focus_week_1">Focus week 1</option>
+                    <option value="focus_week_2">Focus week 2</option>
+                    <option value="focus_week_3">Focus week 3</option>
+                    <option value="focus_week_4">Focus week 4</option>
                     <option value="focus_later">Focus later</option>
                   </select>
                   <button
