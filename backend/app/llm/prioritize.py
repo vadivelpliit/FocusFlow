@@ -1,8 +1,11 @@
 import json
+import logging
 import re
 from typing import Any, Dict, List, Set
 
 from .client import complete
+
+logger = logging.getLogger(__name__)
 
 VALID_TIME_HORIZONS = {"focus_now", "focus_today", "focus_week", "focus_month", "focus_later"}
 VALID_IMPORTANCE = {"P1", "P2", "P3"}
@@ -50,12 +53,20 @@ You must distribute tasks to prevent burnout while ensuring progress.
 ### Output Requirements
 - Respect existing 'importance' or 'complexity' if already set by the user.
 - Reply with ONLY a valid JSON array of objects. No markdown, no code fences, no explanation before or after.
-- Keys: task_id (number), time_horizon (string), importance (string), reasoning (string - a short 10-word explanation of why it was placed here).
+- Keys: task_id (number), time_horizon (string), importance (string), reasoning (string - a short phrase, no double quotes inside).
+- Use valid JSON only: no trailing commas after last element, no unescaped quotes inside strings.
 
-Example: [{{"task_id": 1, "time_horizon": "focus_today", "importance": "P1", "reasoning": "Tax deadline in 2 weeks; financial risk."}}, ...]
+Example: [{{"task_id": 1, "time_horizon": "focus_today", "importance": "P1", "reasoning": "Tax deadline in 2 weeks"}}, ...]
 
 ### Tasks to Process:
 {tasks_json}"""
+
+
+def _normalize_json_string(s: str) -> str:
+    """Remove trailing commas and other common invalid JSON that LLMs sometimes emit."""
+    s = re.sub(r",\s*}", "}", s)
+    s = re.sub(r",\s*]", "]", s)
+    return s
 
 
 def _parse_response(text: str, task_ids: Set[int]) -> List[Dict]:
@@ -66,13 +77,18 @@ def _parse_response(text: str, task_ids: Set[int]) -> List[Dict]:
     match = re.search(r"\[[\s\S]*\]", text)
     if match:
         text = match.group(0)
+    logger.debug("Prioritize parse input (extracted array, length=%d): %s", len(text), text)
+    # Try parsing; if it fails, try again after removing trailing commas
     try:
         data = json.loads(text)
-    except json.JSONDecodeError as e:
-        raise ValueError(
-            f"LLM response was not valid JSON: {e}. "
-            "The model may have returned plain text or an error. Try again."
-        ) from e
+    except json.JSONDecodeError:
+        try:
+            data = json.loads(_normalize_json_string(text))
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"LLM response was not valid JSON: {e}. "
+                "The model may have returned plain text or an error. Try again."
+            ) from e
     if not isinstance(data, list):
         raise ValueError("Expected JSON array")
     result = []
@@ -100,5 +116,6 @@ def prioritize_tasks(tasks: list) -> List[Dict]:
     summary = [_task_summary(t) for t in tasks]
     prompt = _build_prompt(summary)
     response = complete(prompt, json_mode=True)
+    logger.info("Prioritize LLM raw response (length=%d): %s", len(response), response)
     task_ids = {t.id for t in tasks}
     return _parse_response(response, task_ids)
