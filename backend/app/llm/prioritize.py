@@ -10,6 +10,7 @@ Mapping (LLM → UI):
 import json
 import logging
 import re
+import time
 from datetime import date
 from typing import Any, Dict, List, Set
 
@@ -154,9 +155,10 @@ def prioritize_tasks(tasks: list) -> List[Dict]:
         return []
     summary = [_task_summary(t) for t in tasks]
     prompt = _build_prompt(summary)
+    t0 = time.perf_counter()
     response = complete(prompt, json_mode=True, max_tokens=8192)
-    logger.info("Prioritize LLM raw response (length=%d): %s", len(response), response)
-    # Always print so it shows in Railway Deploy logs
-    print(f"[Prioritize] LLM raw response (length={len(response)}): {response!r}", flush=True)
+    elapsed = time.perf_counter() - t0
+    logger.info("Prioritize LLM raw response (length=%d, %.2fs): %s", len(response), elapsed, response)
+    print(f"[Prioritize] LLM responded in {elapsed:.2f}s (length={len(response)}): {response!r}", flush=True)
     task_ids = {t.id for t in tasks}
     return _parse_response(response, task_ids)
