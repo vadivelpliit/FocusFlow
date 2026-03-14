@@ -107,6 +107,6 @@ def prioritize_tasks_route(db: Session = Depends(get_db), current_user: User = D
         updated = _run_prioritize(db, current_user.id)
         return {"updated": updated}
     except ValueError as e:
-        if "OPENAI_API_KEY" in str(e):
-            raise HTTPException(status_code=503, detail="AI prioritization is not configured. Set OPENAI_API_KEY.")
+        if "GEMINI_API_KEY" in str(e) or "OPENAI_API_KEY" in str(e):
+            raise HTTPException(status_code=503, detail="AI prioritization is not configured. Set GEMINI_API_KEY or OPENAI_API_KEY.")
         raise HTTPException(status_code=422, detail=str(e))

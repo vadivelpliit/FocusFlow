@@ -97,8 +97,8 @@ def propose_week_schedule(body: ScheduleProposeRequest, db: Session = Depends(ge
         blocks = propose_schedule(day_descriptions, body.desired_activities or [])
         return {"blocks": blocks}
     except ValueError as e:
-        if "OPENAI_API_KEY" in str(e):
-            raise HTTPException(status_code=503, detail="AI schedule is not configured. Set OPENAI_API_KEY.")
+        if "GEMINI_API_KEY" in str(e) or "OPENAI_API_KEY" in str(e):
+            raise HTTPException(status_code=503, detail="AI schedule is not configured. Set GEMINI_API_KEY or OPENAI_API_KEY.")
         raise
 
 
@@ -189,6 +189,6 @@ def recommend_route(body: RecommendRequest, db: Session = Depends(get_db), curre
             window_end=end.isoformat(),
         )
     except ValueError as e:
-        if "OPENAI_API_KEY" in str(e):
-            raise HTTPException(status_code=503, detail="AI recommend is not configured. Set OPENAI_API_KEY.")
+        if "GEMINI_API_KEY" in str(e) or "OPENAI_API_KEY" in str(e):
+            raise HTTPException(status_code=503, detail="AI recommend is not configured. Set GEMINI_API_KEY or OPENAI_API_KEY.")
         raise

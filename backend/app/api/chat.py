@@ -27,6 +27,6 @@ def chat(request: ChatRequest, db: Session = Depends(get_db), current_user: User
         reply = chat_reply(request.message.strip(), tasks)
         return ChatResponse(reply=reply)
     except ValueError as e:
-        if "OPENAI_API_KEY" in str(e):
-            raise HTTPException(status_code=503, detail="AI chat is not configured. Set OPENAI_API_KEY.")
+        if "GEMINI_API_KEY" in str(e) or "OPENAI_API_KEY" in str(e):
+            raise HTTPException(status_code=503, detail="AI chat is not configured. Set GEMINI_API_KEY or OPENAI_API_KEY.")
         raise

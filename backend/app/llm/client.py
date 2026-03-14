@@ -1,29 +1,82 @@
 import os
 from typing import Optional
 
-from openai import OpenAI
+# Lazy imports for the provider in use
+_gemini_client: Optional[object] = None
+_openai_client: Optional[object] = None
+_provider: Optional[str] = None  # "gemini" or "openai"
 
-_client: Optional[OpenAI] = None
 
-
-def get_client() -> OpenAI:
-    global _client
-    if _client is None:
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable is not set")
-        _client = OpenAI(api_key=api_key)
-    return _client
+def _get_provider() -> str:
+    global _provider
+    if _provider is not None:
+        return _provider
+    if os.getenv("GEMINI_API_KEY"):
+        _provider = "gemini"
+        return "gemini"
+    if os.getenv("OPENAI_API_KEY"):
+        _provider = "openai"
+        return "openai"
+    raise ValueError(
+        "Set either GEMINI_API_KEY or OPENAI_API_KEY in the environment."
+    )
 
 
 def complete(prompt: str, *, max_tokens: int = 2000) -> str:
-    client = get_client()
+    provider = _get_provider()
+    if provider == "gemini":
+        return _complete_gemini(prompt, max_tokens=max_tokens)
+    return _complete_openai(prompt, max_tokens=max_tokens)
+
+
+def _complete_gemini(prompt: str, *, max_tokens: int = 2000) -> str:
+    global _gemini_client
+    from google import genai
+    from google.genai import types
+
+    if _gemini_client is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        _gemini_client = genai.Client(api_key=api_key)
+    client = _gemini_client
+    model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    config = types.GenerateContentConfig(
+        max_output_tokens=max_tokens,
+        temperature=0.3,
+    )
+    response = client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config=config,
+    )
+    if not response or not response.text:
+        raise ValueError("Empty response from LLM")
+    return response.text.strip()
+
+
+def _complete_openai(prompt: str, *, max_tokens: int = 2000) -> str:
+    global _openai_client
+    from openai import OpenAI
+
+    if _openai_client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        _openai_client = OpenAI(api_key=api_key)
+    client = _openai_client
+    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     response = client.chat.completions.create(
-        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        model=model,
         messages=[{"role": "user", "content": prompt}],
         max_tokens=max_tokens,
         temperature=0.3,
     )
     if not response.choices:
         raise ValueError("Empty response from LLM")
-    return response.choices[0].message.content or ""
+    return (response.choices[0].message.content or "").strip()
+
+
+def get_configured_provider() -> Optional[str]:
+    """Return which provider will be used ('gemini' or 'openai'), or None if neither key is set."""
+    if os.getenv("GEMINI_API_KEY"):
+        return "gemini"
+    if os.getenv("OPENAI_API_KEY"):
+        return "openai"
+    return None

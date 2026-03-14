@@ -23,8 +23,8 @@ Deploy the **backend first** so you have the API URL for the frontend.
    In the **backend service** → **Variables**:
    - `DATABASE_URL` — from step 4 (PostgreSQL URL).
    - `SECRET_KEY` — long random string for JWT (e.g. generate with `openssl rand -hex 32`). Required for auth.
-   - `OPENAI_API_KEY` — your OpenAI API key (required for prioritize, chat, schedule).
-   - (Optional) `OPENAI_MODEL` — e.g. `gpt-4o-mini` or `gpt-4o`.
+   - `GEMINI_API_KEY` — your Gemini API key (required for prioritize, chat, schedule).
+   - (Optional) `GEMINI_MODEL` — e.g. `gemini-1.5-flash` or `gemini-1.5-pro` (default: gemini-1.5-flash).
    - (Optional) `CORS_ORIGINS` — leave empty for now; add your Vercel URL after step 2 below (e.g. `https://your-app.vercel.app`).
    - (Optional) `FRONTEND_URL` — your Vercel app URL (for password-reset emails). SMTP vars optional (see `backend/.env.example`).
 
@@ -91,7 +91,7 @@ Deploy the **backend first** so you have the API URL for the frontend.
 |------|--------|------|
 | 1 | Railway | New project from GitHub, root = `backend` |
 | 2 | Railway | Add PostgreSQL, link `DATABASE_URL` to backend |
-| 3 | Railway | Set `OPENAI_API_KEY` (and optional `OPENAI_MODEL`) |
+| 3 | Railway | Set `GEMINI_API_KEY` (and optional `GEMINI_MODEL`) |
 | 4 | Railway | Ensure start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | 5 | Railway | Generate domain, copy API URL |
 | 6 | Vercel | Import repo, root = `frontend` |
@@ -120,5 +120,5 @@ After migration (automatic or manual):
 
 ## Local .env reference
 
-- **Backend** (`backend/.env`): `DATABASE_URL`, `SECRET_KEY`, `OPENAI_API_KEY`, optional `OPENAI_MODEL`, optional `CORS_ORIGINS`, optional `FRONTEND_URL` and SMTP for password reset.
+- **Backend** (`backend/.env`): `DATABASE_URL`, `SECRET_KEY`, `GEMINI_API_KEY`, optional `GEMINI_MODEL`, optional `CORS_ORIGINS`, optional `FRONTEND_URL` and SMTP for password reset.
 - **Frontend** (`frontend/.env.local`): `NEXT_PUBLIC_API_URL=http://localhost:8000` for local dev.

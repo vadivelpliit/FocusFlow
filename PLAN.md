@@ -52,7 +52,7 @@ So: **Tasks** = what to do; **Schedule** = when you usually do which type of act
   - **Option A (recommended):** React or Next.js app in a `frontend/` folder, calling the Python API. Deploy frontend on **Vercel**, API on **Railway**. Clear split, good for "30 min chat" and rich UI.
   - **Option B:** Single FastAPI app with Jinja templates + HTMX or minimal JS. Deploy only on **Railway**. Simpler, one codebase; Vercel used only for static assets if needed.
 - **Database:** SQLite for local/dev; **PostgreSQL** on Railway for production (same SQLAlchemy models).
-- **LLM:** One provider (e.g. OpenAI) behind an interface so you can swap later. Store API key in env (e.g. `OPENAI_API_KEY`).
+- **LLM:** Gemini (Google) behind a thin client interface. Store API key in env (`GEMINI_API_KEY`).
 
 ### 4. High-level architecture
 
