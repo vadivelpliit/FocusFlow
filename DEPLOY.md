@@ -24,7 +24,7 @@ Deploy the **backend first** so you have the API URL for the frontend.
    - `DATABASE_URL` — from step 4 (PostgreSQL URL).
    - `SECRET_KEY` — long random string for JWT (e.g. generate with `openssl rand -hex 32`). Required for auth.
    - `GEMINI_API_KEY` — your Gemini API key (required for prioritize, chat, schedule).
-   - (Optional) `GEMINI_MODEL` — e.g. `gemini-1.5-flash` or `gemini-1.5-pro` (default: gemini-1.5-flash).
+   - (Optional) `GEMINI_MODEL` — e.g. `gemini-2.5-flash` (default) or `gemini-2.5-pro`.
    - (Optional) `CORS_ORIGINS` — leave empty for now; add your Vercel URL after step 2 below (e.g. `https://your-app.vercel.app`).
    - (Optional) `FRONTEND_URL` — your Vercel app URL (for password-reset emails). SMTP vars optional (see `backend/.env.example`).
 

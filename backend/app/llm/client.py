@@ -38,7 +38,7 @@ def _complete_gemini(prompt: str, *, max_tokens: int = 2000) -> str:
         api_key = os.getenv("GEMINI_API_KEY")
         _gemini_client = genai.Client(api_key=api_key)
     client = _gemini_client
-    model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     config = types.GenerateContentConfig(
         max_output_tokens=max_tokens,
         temperature=0.3,
