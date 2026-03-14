@@ -53,6 +53,7 @@ You must distribute tasks to prevent burnout while ensuring progress.
 ### Output Requirements
 - Respect existing 'importance' or 'complexity' if already set by the user.
 - Reply with ONLY a valid JSON array of objects. No markdown, no code fences, no explanation before or after.
+- You MUST include exactly one object for every task in the list below. Do not truncate; return the full array.
 - Keys: task_id (number), time_horizon (string), importance (string), reasoning (string - a short phrase, no double quotes inside).
 - Use valid JSON only: no trailing commas after last element, no unescaped quotes inside strings.
 
@@ -115,7 +116,7 @@ def prioritize_tasks(tasks: list) -> List[Dict]:
         return []
     summary = [_task_summary(t) for t in tasks]
     prompt = _build_prompt(summary)
-    response = complete(prompt, json_mode=True)
+    response = complete(prompt, json_mode=True, max_tokens=8192)
     logger.info("Prioritize LLM raw response (length=%d): %s", len(response), response)
     # Always print so it shows in Railway Deploy logs
     print(f"[Prioritize] LLM raw response (length={len(response)}): {response!r}", flush=True)
