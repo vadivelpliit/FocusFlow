@@ -118,6 +118,17 @@ After migration (automatic or manual):
 
 ---
 
+## Time horizons (focus_week → focus_week_1, etc.)
+
+Tasks in the DB may still have legacy values: `focus_now`, `focus_week`, `focus_month`. The API **normalizes these on read** so responses always use the current set (`focus_today`, `focus_week_1`–`focus_week_4`, `focus_later`). No DB migration or deploy-time script is required.
+
+**You do not need to run AI Prioritize on deploy.** Options:
+
+- **Let users re-prioritize:** After deploy, users can click “Prioritize” in the app to re-run the LLM and get tasks assigned to the new week buckets. Until then, legacy values are mapped (e.g. `focus_week` → `focus_week_1`) in API responses.
+- **Optional one-time run:** If you want all tasks updated in bulk, call `POST /tasks/prioritize` once per user (e.g. after deploy, or via a script) while logged in. Do not run this automatically on every deploy (LLM cost and latency).
+
+---
+
 ## Local .env reference
 
 - **Backend** (`backend/.env`): `DATABASE_URL`, `SECRET_KEY`, `GEMINI_API_KEY`, optional `GEMINI_MODEL`, optional `CORS_ORIGINS`, optional `FRONTEND_URL` and SMTP for password reset.

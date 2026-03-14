@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class TaskBase(BaseModel):
@@ -33,6 +33,15 @@ class TaskUpdate(BaseModel):
     completed: Optional[bool] = None
 
 
+# Map legacy time_horizon values (from DB) to current set so API responses are consistent.
+# Use after deploy until all tasks are re-prioritized; then optional to remove.
+LEGACY_TIME_HORIZON_MAP = {
+    "focus_now": "focus_today",
+    "focus_week": "focus_week_1",
+    "focus_month": "focus_week_2",
+}
+
+
 class TaskResponse(TaskBase):
     id: int
     completed: bool = False
@@ -41,6 +50,13 @@ class TaskResponse(TaskBase):
 
     class Config:
         from_attributes = True
+
+    @field_validator("time_horizon", mode="after")
+    @classmethod
+    def normalize_legacy_time_horizon(cls, v: Optional[str]) -> Optional[str]:
+        if v and v in LEGACY_TIME_HORIZON_MAP:
+            return LEGACY_TIME_HORIZON_MAP[v]
+        return v
 
 
 # Schedule (Phase 4)

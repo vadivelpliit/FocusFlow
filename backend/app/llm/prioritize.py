@@ -7,7 +7,14 @@ from .client import complete
 
 logger = logging.getLogger(__name__)
 
-VALID_TIME_HORIZONS = {"focus_now", "focus_today", "focus_week", "focus_month", "focus_later"}
+VALID_TIME_HORIZONS = {
+    "focus_today",
+    "focus_week_1",
+    "focus_week_2",
+    "focus_week_3",
+    "focus_week_4",
+    "focus_later",
+}
 VALID_IMPORTANCE = {"P1", "P2", "P3"}
 
 
@@ -21,43 +28,47 @@ def _task_summary(task: Any) -> dict:
         "tags": task.tags or [],
         "importance": getattr(task, "importance", None),
         "complexity": getattr(task, "complexity", None),
+        "rank": getattr(task, "rank", None),
     }
 
 
 def _build_prompt(tasks_summary: List[Dict]) -> str:
     tasks_json = json.dumps(tasks_summary, indent=2)
     return f"""### Role
-You are a High-Performance Executive Assistant specializing in Cognitive Load Management. Your goal is to organize the user's backlog into a realistic, high-impact schedule.
+You are a High-Performance Executive Assistant specializing in Capacity Planning. You manage a strict **5-Point Weekly Velocity** (Large=3, Medium=2, Small=1).
 
-### Inputs to Use
-For each task, use: "detail" (what the task is), "comments" (next steps, progress notes, or context the user added), and—when present—"importance" (P1/P2/P3) and "complexity" (small/medium/large). Detail and comments tell you what the task is and where the user stands; importance and complexity, when set, should inform your time_horizon and reasoning. Use all of these to decide time_horizon, importance, and reasoning.
+### Step 1: Fixed Commitment Slotting (Tasks WITH Due Dates)
+Calculate the **Start Date** (Due Date minus Buffer: Large=30d, Medium=14d, Small=7d).
+- Assign these to the earliest applicable week (Week 1, 2, 3, or 4) based on the Start Date.
+- These tasks take priority in the 5-point budget.
 
-### Step 1: Reality-Check Evaluation
-Before assigning horizons, analyze each task's "True Urgency":
-- **Domain Lead-Time:** Use your world knowledge. (e.g., Taxes, Medical Appointments, or Large Projects require 3-4 weeks of lead time). If the "Start Date" is now, treat it as urgent.
-- **Risk Multiplier:** Any task tagged "health," "financial," or "legal" automatically jumps one priority level (P2 becomes P1) and moves closer in time horizon.
-- **The "Rot" Factor:** For tasks with no due_date, assign a "Virtual Deadline" based on importance. High-importance items without dates MUST NOT stay in focus_later for more than 7 days.
-
-### Step 2: The "Cognitive Budget" (Slot Filling)
-You must distribute tasks to prevent burnout while ensuring progress.
-- **Focus_Today Budget:** Max 1 "Large" task + 2 "Small" tasks, OR 3 "Medium" tasks. Total "Complexity" should not exceed a "5-point" limit (Large=3, Medium=2, Small=1).
-- **The "Large" Progress Rule:** If a task is LARGE and due within 21 days, it MUST have a presence in focus_today or focus_week to ensure incremental progress.
-- **The "Squeeze-In" Rule:** If the today/week buckets are full of Large tasks, prioritize adding a "Small" high-priority task rather than another Large one.
+### Step 2: Backlog Injection (Tasks WITHOUT Due Dates)
+For all items without a due date, use their **Rank (1-5)** and **Importance (P1-P3)**:
+- Look for "Open Slots" in the 5-point budget for Week 1.
+- Fill slots in order: P1 (Rank 1 -> 5), then P2 (Rank 1 -> 5).
+- If Week 1 is full, move to Week 2, and so on.
 
 ### Step 3: Horizon Definitions
-1. focus_now/today: Immediate risks (financial/health), tasks starting today based on lead-time, or "Quick Wins" (Small complexity) to build momentum.
-2. focus_week: Heavy lifting. Large projects requiring multiple days of effort.
-3. focus_month: Preparatory tasks and medium-term milestones.
-4. focus_later: Low-priority, low-risk, or "Someday" ideas.
+1. **focus_today:** The top 1-2 items from Week 1 (Total max 5 points for the week).
+2. **focus_week_1 / focus_week_2 / focus_week_3 / focus_week_4:** Tasks assigned to these specific 7-day windows.
+3. **focus_later:** Anything that doesn't fit in the next 4 weeks or has P3 importance.
 
-### Output Requirements
-- Respect existing 'importance' or 'complexity' if already set by the user.
-- Reply with ONLY a valid JSON array of objects. No markdown, no code fences, no explanation before or after.
-- You MUST include exactly one object for every task in the list below. Do not truncate; return the full array.
-- Keys: task_id (number), time_horizon (string), importance (string), reasoning (string - a short phrase, no double quotes inside).
-- Use valid JSON only: no trailing commas after last element, no unescaped quotes inside strings.
+### Step 4: Cognitive Guardrails
+- **Max Points:** Never exceed 5 points in any single week bucket.
+- **Risk Multiplier:** Health/Financial tasks bypass the budget and go to Week 1 immediately.
 
-Example: [{{"task_id": 1, "time_horizon": "focus_today", "importance": "P1", "reasoning": "Tax deadline in 2 weeks"}}, ...]
+### Inputs to Use
+For each task use: detail, comments, due_date, tags, importance (P1/P2/P3), complexity (small/medium/large), and rank (1-5 when present).
+
+### Output Format (Strict JSON Array)
+- Reply with ONLY a JSON array of arrays. No markdown, no explanation.
+- Format: [[task_id, time_horizon, importance, reasoning]]
+- time_horizon: one of focus_today, focus_week_1, focus_week_2, focus_week_3, focus_week_4, focus_later
+- importance: P1, P2, or P3
+- reasoning: one short phrase (no quotes inside)
+- One row per task below. Do not truncate.
+
+Example: [[7, "focus_week_2", "P1", "Start date in week 2"], [8, "focus_today", "P1", "Health task Week 1"]]
 
 ### Tasks to Process:
 {tasks_json}"""
@@ -94,14 +105,23 @@ def _parse_response(text: str, task_ids: Set[int]) -> List[Dict]:
         raise ValueError("Expected JSON array")
     result = []
     for item in data:
-        if not isinstance(item, dict):
+        # Compact format: [task_id, time_horizon, importance, reasoning]
+        if isinstance(item, list) and len(item) >= 4:
+            tid, th, imp, reasoning = item[0], item[1], item[2], item[3]
+            tid = int(tid) if tid is not None else None
+            reasoning = (str(reasoning).strip() or None) if reasoning is not None else None
+        # Legacy object format
+        elif isinstance(item, dict):
+            tid = item.get("task_id")
+            th = item.get("time_horizon")
+            imp = item.get("importance")
+            reasoning = (item.get("reasoning") or "").strip() or None
+        else:
             continue
-        tid = item.get("task_id")
         if tid is None or int(tid) not in task_ids:
             continue
-        th = item.get("time_horizon")
-        imp = item.get("importance")
-        reasoning = (item.get("reasoning") or "").strip() or None
+        th = str(th).strip() if th is not None else "focus_later"
+        imp = str(imp).strip() if imp is not None else "P2"
         if th not in VALID_TIME_HORIZONS:
             th = "focus_later"
         if imp not in VALID_IMPORTANCE:
