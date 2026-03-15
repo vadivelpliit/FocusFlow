@@ -2,7 +2,7 @@
 Prioritize: LLM returns only priority_score + complexity; app logic assigns time_horizon.
 
 Flow:
-- LLM returns JSON array of { task_id, priority_score (1-100), complexity }. No reason (keeps response small/fast).
+- LLM returns JSON array of arrays: [[task_id, priority_score, complexity], ...]. Keeps response small/fast.
 - We compute time_horizon from buffer + 5pt weekly budget. Importance from score.
 """
 import json
@@ -48,8 +48,9 @@ def _task_summary(task: Any) -> dict:
 
 def _build_prompt(tasks_summary: List[Dict]) -> str:
     tasks_json = json.dumps(tasks_summary, indent=2)
-    return f"""Assign each task a priority_score (1-100) and complexity (small/medium/large). Output ONLY a JSON array of objects with keys: task_id, priority_score, complexity. No other text.
-Scoring: Financial/Legal/Health=80-100, Blockers=70-90, High-impact=60-80, else=1-59. Infer complexity from detail if missing.
+    return f"""Assign each task priority_score (1-100) and complexity (small/medium/large). Output ONLY a JSON array of arrays: [[task_id, priority_score, complexity], ...]. No other text.
+Scoring: Financial/Legal/Health=80-100, Blockers=70-90, High-impact=60-80, else=1-59. Infer complexity if missing.
+Example: [[7, 95, "large"], [8, 90, "medium"]]
 
 {tasks_json}"""
 
@@ -76,7 +77,7 @@ def _score_to_importance(score: int) -> str:
 
 
 def _parse_llm_response(text: str, task_ids: Set[int]) -> List[Dict]:
-    """Parse LLM JSON array of { task_id, priority_score, complexity }."""
+    """Parse LLM JSON array of [task_id, priority_score, complexity] or legacy object format."""
     text = (text or "").strip()
     if not text:
         raise ValueError("LLM returned empty response. Try again or check the model is available.")
@@ -98,18 +99,32 @@ def _parse_llm_response(text: str, task_ids: Set[int]) -> List[Dict]:
         raise ValueError("Expected JSON array")
     result = []
     for item in data:
-        if not isinstance(item, dict):
+        # Compact format: [task_id, priority_score, complexity]
+        if isinstance(item, list) and len(item) >= 3:
+            try:
+                tid = int(item[0]) if item[0] is not None else None
+            except (TypeError, ValueError):
+                continue
+            try:
+                score = int(item[1]) if item[1] is not None else 50
+            except (TypeError, ValueError):
+                score = 50
+            complexity = (str(item[2]).strip().lower() if item[2] is not None else None) or "medium"
+        elif isinstance(item, dict):
+            tid = item.get("task_id")
+            if tid is None or int(tid) not in task_ids:
+                continue
+            tid = int(tid)
+            try:
+                score = int(item.get("priority_score", 50))
+            except (TypeError, ValueError):
+                score = 50
+            complexity = (item.get("complexity") or "").strip().lower() or "medium"
+        else:
             continue
-        tid = item.get("task_id")
-        if tid is None or int(tid) not in task_ids:
+        if tid is None or tid not in task_ids:
             continue
-        tid = int(tid)
-        try:
-            score = int(item.get("priority_score", 50))
-        except (TypeError, ValueError):
-            score = 50
         score = max(1, min(100, score))
-        complexity = (item.get("complexity") or "").strip().lower() or None
         if complexity not in VALID_COMPLEXITY:
             complexity = "medium"
         result.append({
