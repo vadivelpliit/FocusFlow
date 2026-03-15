@@ -1,17 +1,17 @@
 """
-Prioritize: LLM assigns time_horizon, importance, complexity per task.
+Prioritize: LLM returns priority_score + complexity + reason; app logic assigns time_horizon.
 
-Mapping (LLM → UI):
-- LLM returns: focus_today | focus_week_1 | focus_week_2 | focus_week_3 | focus_week_4 | focus_later
-- Backend stores that value in task.time_horizon.
-- API (TaskResponse) normalizes legacy on read only: focus_week→focus_week_1, focus_now→focus_today, focus_month→focus_week_2.
-- Frontend utils.TIME_HORIZON_SECTIONS maps each horizon to a section label (Focus today, Focus week 1, …).
+Flow:
+- LLM returns JSON array of { task_id, priority_score (1-100), complexity, reason }.
+- We compute time_horizon: with due_date → buffer by complexity, map start_date to focus_today/week_1-4/later;
+  without due_date → fill weekly 5-point budget by priority_score.
+- Importance (P1/P2/P3) derived from priority_score. Stored: time_horizon, importance, complexity, reasoning.
 """
 import json
 import logging
 import re
 import time
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Dict, List, Set
 
 from .client import complete
@@ -28,6 +28,10 @@ VALID_TIME_HORIZONS = {
 }
 VALID_IMPORTANCE = {"P1", "P2", "P3"}
 VALID_COMPLEXITY = {"small", "medium", "large"}
+
+COMPLEXITY_BUFFER_DAYS = {"small": 7, "medium": 14, "large": 30}
+COMPLEXITY_POINTS = {"small": 1, "medium": 2, "large": 3}
+WEEKLY_POINT_BUDGET = 5
 
 
 def _task_summary(task: Any) -> dict:
@@ -46,42 +50,26 @@ def _task_summary(task: Any) -> dict:
 
 def _build_prompt(tasks_summary: List[Dict]) -> str:
     tasks_json = json.dumps(tasks_summary, indent=2)
-    today = date.today().isoformat()
     return f"""### Role
-You are a High-Performance Executive Assistant specializing in Capacity Planning. You manage a strict **5-Point Weekly Velocity** (Large=3, Medium=2, Small=1).
+You are an expert Prioritization Engine. Your task is to analyze a list of tasks and assign a "Strategic Priority Score" (1-100).
 
-**Today's date:** {today}
-- Week 1 = days 0-6 from today, Week 2 = days 7-13, Week 3 = days 14-20, Week 4 = days 21-27.
+### Instructions
+1. For each task, output a JSON object with:
+   - "task_id": The ID provided.
+   - "priority_score": An integer (1-100) based on impact, urgency, and risk.
+   - "complexity": If missing or null, infer it as "small", "medium", or "large" based on the task detail.
+   - "reason": A one-sentence executive justification.
 
-### Step 1: Fixed Commitment Slotting (Tasks WITH Due Dates)
-Calculate **Start Date** = Due Date minus Buffer (Large=30d, Medium=14d, Small=7d). Assign to the week that contains that Start Date:
-- Start Date in Week 1 → use focus_today (if top 1-2 for today) or **focus_week_1**
-- Start Date in Week 2 → **focus_week_2**
-- Start Date in Week 3 → **focus_week_3**
-- Start Date in Week 4 → **focus_week_4**
-- Start Date after Week 4 or no due date and low priority → **focus_later**
-You MUST use focus_week_2, focus_week_3, focus_week_4 when the Start Date falls in those weeks; do not put everything in focus_week_1.
+2. Prioritize:
+   - Financial/Legal/Health risks = Score 80-100.
+   - Blockers for other projects = Score 70-90.
+   - High-impact/Long-term alignment = Score 60-80.
+   - All others = Score 1-59.
 
-### Step 2: Backlog Injection (Tasks WITHOUT Due Dates)
-Fill the 5-point budget per week. Week 1 first (P1 then P2 by rank), then Week 2, 3, 4. Assign **focus_week_1**, **focus_week_2**, **focus_week_3**, or **focus_week_4** so tasks are spread across weeks. Never put all tasks in focus_week_1.
+### Format
+Return ONLY a JSON array of these objects. No markdown, no conversational text.
 
-### Step 3: Horizon Definitions (use these exact strings)
-- **focus_today:** Top 1-2 items for today only (max 5 points total for Week 1).
-- **focus_week_1** / **focus_week_2** / **focus_week_3** / **focus_week_4:** Task belongs in that calendar week.
-- **focus_later:** Does not fit in the next 4 weeks or P3 importance.
-
-### Step 4: Cognitive Guardrails
-- Max 5 complexity points per week. Risk (health/financial) → Week 1 (focus_today or focus_week_1).
-
-### Output Format (Strict JSON Array)
-- ONLY a JSON array of arrays. No markdown. No explanation.
-- Format: [[task_id, time_horizon, importance, complexity]]
-- time_horizon: exactly one of focus_today, focus_week_1, focus_week_2, focus_week_3, focus_week_4, focus_later
-- Spread tasks across focus_week_1, focus_week_2, focus_week_3, focus_week_4 where appropriate.
-
-Example: [[1, "focus_today", "P1", "small"], [2, "focus_week_1", "P2", "medium"], [3, "focus_week_2", "P1", "large"], [4, "focus_later", "P3", "small"]]
-
-### Tasks to Process:
+### Data
 {tasks_json}"""
 
 
@@ -98,17 +86,24 @@ def _normalize_json_string(s: str) -> str:
     return s
 
 
-def _parse_response(text: str, task_ids: Set[int]) -> List[Dict]:
+def _score_to_importance(score: int) -> str:
+    if score >= 80:
+        return "P1"
+    if score >= 50:
+        return "P2"
+    return "P3"
+
+
+def _parse_llm_response(text: str, task_ids: Set[int]) -> List[Dict]:
+    """Parse LLM JSON array of { task_id, priority_score, complexity, reason }."""
     text = (text or "").strip()
     if not text:
         raise ValueError("LLM returned empty response. Try again or check the model is available.")
-    # Try to extract JSON array (in case LLM wraps in markdown or adds prose)
     match = re.search(r"\[[\s\S]*\]", text)
     if match:
         text = match.group(0)
-    # Normalize trailing commas and truncated arrays before parsing
     text = _normalize_json_string(text)
-    logger.debug("Prioritize parse input (extracted array, length=%d): %s", len(text), text)
+    logger.debug("Prioritize parse input (length=%d): %s", len(text), text)
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
@@ -116,41 +111,131 @@ def _parse_response(text: str, task_ids: Set[int]) -> List[Dict]:
             data = json.loads(_normalize_json_string(text))
         except json.JSONDecodeError as e:
             raise ValueError(
-                f"LLM response was not valid JSON: {e}. "
-                "The model may have returned plain text or an error. Try again."
+                f"LLM response was not valid JSON: {e}. Try again."
             ) from e
     if not isinstance(data, list):
         raise ValueError("Expected JSON array")
     result = []
     for item in data:
-        # Compact format: [task_id, time_horizon, importance, complexity]
-        if isinstance(item, list) and len(item) >= 4:
-            tid, th, imp, complexity = item[0], item[1], item[2], item[3]
-            tid = int(tid) if tid is not None else None
-            complexity = (str(complexity).strip().lower() if complexity else None) or None
-        elif isinstance(item, dict):
-            tid = item.get("task_id")
-            th = item.get("time_horizon")
-            imp = item.get("importance")
-            complexity = (item.get("complexity") or "").strip().lower() or None
-        else:
+        if not isinstance(item, dict):
             continue
+        tid = item.get("task_id")
         if tid is None or int(tid) not in task_ids:
             continue
-        th = str(th).strip() if th is not None else "focus_later"
-        imp = str(imp).strip() if imp is not None else "P2"
-        if th not in VALID_TIME_HORIZONS:
-            th = "focus_later"
-        if imp not in VALID_IMPORTANCE:
-            imp = "P2"
+        tid = int(tid)
+        try:
+            score = int(item.get("priority_score", 50))
+        except (TypeError, ValueError):
+            score = 50
+        score = max(1, min(100, score))
+        complexity = (item.get("complexity") or "").strip().lower() or None
         if complexity not in VALID_COMPLEXITY:
-            complexity = None
-        result.append({"task_id": int(tid), "time_horizon": th, "importance": imp, "complexity": complexity})
+            complexity = "medium"
+        reason = (item.get("reason") or "").strip() or None
+        result.append({
+            "task_id": tid,
+            "priority_score": score,
+            "complexity": complexity,
+            "reason": reason,
+        })
     return result
 
 
+def _compute_horizons(tasks: List[Any], llm_results: List[Dict]) -> List[Dict]:
+    """
+    Compute time_horizon for each task from LLM priority_score + complexity.
+    - With due_date: start_date = due_date - buffer[complexity]; map to focus_today / focus_week_1..4 / focus_later.
+    - Without due_date: fill weekly 5-point budget by priority_score (high score first).
+    """
+    today = date.today()
+    by_id = {t.id: t for t in tasks}
+    llm_by_id = {r["task_id"]: r for r in llm_results}
+
+    out: List[Dict] = []
+    no_due: List[tuple] = []  # (task_id, priority_score, points)
+
+    for r in llm_results:
+        tid = r["task_id"]
+        task = by_id.get(tid)
+        if not task:
+            continue
+        score = r["priority_score"]
+        complexity = r.get("complexity") or "medium"
+        points = COMPLEXITY_POINTS.get(complexity, 2)
+        importance = _score_to_importance(score)
+
+        if getattr(task, "due_date", None):
+            due = task.due_date
+            if hasattr(due, "date"):
+                due = due.date()
+            buffer_days = COMPLEXITY_BUFFER_DAYS.get(complexity, 14)
+            start_date = due - timedelta(days=buffer_days)
+            if start_date <= today:
+                time_horizon = "focus_today"
+            else:
+                delta = (start_date - today).days
+                if delta <= 7:
+                    time_horizon = "focus_week_1"
+                elif delta <= 14:
+                    time_horizon = "focus_week_2"
+                elif delta <= 21:
+                    time_horizon = "focus_week_3"
+                elif delta <= 28:
+                    time_horizon = "focus_week_4"
+                else:
+                    time_horizon = "focus_later"
+        else:
+            no_due.append((tid, score, points))
+
+        if getattr(task, "due_date", None):
+            out.append({
+                "task_id": tid,
+                "time_horizon": time_horizon,
+                "importance": importance,
+                "complexity": complexity,
+                "reasoning": r.get("reason"),
+            })
+
+    # No-due-date: fill week 1..4 by 5 points each, sorted by priority_score desc
+    no_due.sort(key=lambda x: -x[1])
+    week_budgets = [
+        ("focus_week_1", WEEKLY_POINT_BUDGET),
+        ("focus_week_2", WEEKLY_POINT_BUDGET),
+        ("focus_week_3", WEEKLY_POINT_BUDGET),
+        ("focus_week_4", WEEKLY_POINT_BUDGET),
+    ]
+    week_idx = 0
+    for tid, score, points in no_due:
+        importance = _score_to_importance(score)
+        r = llm_by_id[tid]
+        complexity = r.get("complexity") or "medium"
+        # Skip weeks that don't have room for this task
+        while week_idx < len(week_budgets) and week_budgets[week_idx][1] < points:
+            week_idx += 1
+        if week_idx < len(week_budgets):
+            name, budget = week_budgets[week_idx]
+            time_horizon = name
+            week_budgets[week_idx] = (name, budget - points)
+            if week_budgets[week_idx][1] <= 0:
+                week_idx += 1
+        else:
+            time_horizon = "focus_later"
+        out.append({
+            "task_id": tid,
+            "time_horizon": time_horizon,
+            "importance": importance,
+            "complexity": complexity,
+            "reasoning": r.get("reason"),
+        })
+
+    return out
+
+
 def prioritize_tasks(tasks: list) -> List[Dict]:
-    """Call LLM to get time_horizon, importance, and complexity per task. Returns list of { task_id, time_horizon, importance, complexity }."""
+    """
+    LLM returns priority_score + complexity + reason; we compute time_horizon.
+    Returns list of { task_id, time_horizon, importance, complexity, reasoning }.
+    """
     if not tasks:
         return []
     summary = [_task_summary(t) for t in tasks]
@@ -161,4 +246,5 @@ def prioritize_tasks(tasks: list) -> List[Dict]:
     logger.info("Prioritize LLM raw response (length=%d, %.2fs): %s", len(response), elapsed, response)
     print(f"[Prioritize] LLM responded in {elapsed:.2f}s (length={len(response)}): {response!r}", flush=True)
     task_ids = {t.id for t in tasks}
-    return _parse_response(response, task_ids)
+    llm_results = _parse_llm_response(response, task_ids)
+    return _compute_horizons(tasks, llm_results)

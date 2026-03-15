@@ -35,12 +35,13 @@ def _run_prioritize(db: Session, user_id: int):
         task = by_id.get(r["task_id"])
         if not task:
             continue
-        # Allow AI to always adjust focus (time_horizon); keep existing importance/complexity if user set them.
         new_time_horizon = r["time_horizon"]
         new_importance = task.importance if task.importance is not None else r["importance"]
         update_payload: dict = {"time_horizon": new_time_horizon, "importance": new_importance}
         if task.complexity is None and r.get("complexity"):
             update_payload["complexity"] = r["complexity"]
+        if r.get("reasoning") is not None:
+            update_payload["reasoning"] = r["reasoning"]
         update_task(db, r["task_id"], TaskUpdate(**update_payload), user_id=user_id)
         updated_count += 1
     return updated_count
