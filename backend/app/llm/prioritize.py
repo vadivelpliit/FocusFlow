@@ -1,11 +1,9 @@
 """
-Prioritize: LLM returns priority_score + complexity + reason; app logic assigns time_horizon.
+Prioritize: LLM returns only priority_score + complexity; app logic assigns time_horizon.
 
 Flow:
-- LLM returns JSON array of { task_id, priority_score (1-100), complexity, reason }.
-- We compute time_horizon: with due_date → buffer by complexity, map start_date to focus_today/week_1-4/later;
-  without due_date → fill weekly 5-point budget by priority_score.
-- Importance (P1/P2/P3) derived from priority_score. Stored: time_horizon, importance, complexity, reasoning.
+- LLM returns JSON array of { task_id, priority_score (1-100), complexity }. No reason (keeps response small/fast).
+- We compute time_horizon from buffer + 5pt weekly budget. Importance from score.
 """
 import json
 import logging
@@ -50,26 +48,9 @@ def _task_summary(task: Any) -> dict:
 
 def _build_prompt(tasks_summary: List[Dict]) -> str:
     tasks_json = json.dumps(tasks_summary, indent=2)
-    return f"""### Role
-You are an expert Prioritization Engine. Your task is to analyze a list of tasks and assign a "Strategic Priority Score" (1-100).
+    return f"""Assign each task a priority_score (1-100) and complexity (small/medium/large). Output ONLY a JSON array of objects with keys: task_id, priority_score, complexity. No other text.
+Scoring: Financial/Legal/Health=80-100, Blockers=70-90, High-impact=60-80, else=1-59. Infer complexity from detail if missing.
 
-### Instructions
-1. For each task, output a JSON object with:
-   - "task_id": The ID provided.
-   - "priority_score": An integer (1-100) based on impact, urgency, and risk.
-   - "complexity": If missing or null, infer it as "small", "medium", or "large" based on the task detail.
-   - "reason": A one-sentence executive justification.
-
-2. Prioritize:
-   - Financial/Legal/Health risks = Score 80-100.
-   - Blockers for other projects = Score 70-90.
-   - High-impact/Long-term alignment = Score 60-80.
-   - All others = Score 1-59.
-
-### Format
-Return ONLY a JSON array of these objects. No markdown, no conversational text.
-
-### Data
 {tasks_json}"""
 
 
@@ -95,7 +76,7 @@ def _score_to_importance(score: int) -> str:
 
 
 def _parse_llm_response(text: str, task_ids: Set[int]) -> List[Dict]:
-    """Parse LLM JSON array of { task_id, priority_score, complexity, reason }."""
+    """Parse LLM JSON array of { task_id, priority_score, complexity }."""
     text = (text or "").strip()
     if not text:
         raise ValueError("LLM returned empty response. Try again or check the model is available.")
@@ -131,12 +112,10 @@ def _parse_llm_response(text: str, task_ids: Set[int]) -> List[Dict]:
         complexity = (item.get("complexity") or "").strip().lower() or None
         if complexity not in VALID_COMPLEXITY:
             complexity = "medium"
-        reason = (item.get("reason") or "").strip() or None
         result.append({
             "task_id": tid,
             "priority_score": score,
             "complexity": complexity,
-            "reason": reason,
         })
     return result
 
@@ -193,7 +172,6 @@ def _compute_horizons(tasks: List[Any], llm_results: List[Dict]) -> List[Dict]:
                 "time_horizon": time_horizon,
                 "importance": importance,
                 "complexity": complexity,
-                "reasoning": r.get("reason"),
             })
 
     # No-due-date: fill week 1..4 by 5 points each, sorted by priority_score desc
@@ -225,7 +203,6 @@ def _compute_horizons(tasks: List[Any], llm_results: List[Dict]) -> List[Dict]:
             "time_horizon": time_horizon,
             "importance": importance,
             "complexity": complexity,
-            "reasoning": r.get("reason"),
         })
 
     return out
@@ -233,15 +210,15 @@ def _compute_horizons(tasks: List[Any], llm_results: List[Dict]) -> List[Dict]:
 
 def prioritize_tasks(tasks: list) -> List[Dict]:
     """
-    LLM returns priority_score + complexity + reason; we compute time_horizon.
-    Returns list of { task_id, time_horizon, importance, complexity, reasoning }.
+    LLM returns priority_score + complexity only; we compute time_horizon.
+    Returns list of { task_id, time_horizon, importance, complexity }.
     """
     if not tasks:
         return []
     summary = [_task_summary(t) for t in tasks]
     prompt = _build_prompt(summary)
     t0 = time.perf_counter()
-    response = complete(prompt, json_mode=True, max_tokens=8192)
+    response = complete(prompt, json_mode=True, max_tokens=4096)
     elapsed = time.perf_counter() - t0
     logger.info("Prioritize LLM raw response (length=%d, %.2fs): %s", len(response), elapsed, response)
     print(f"[Prioritize] LLM responded in {elapsed:.2f}s (length={len(response)}): {response!r}", flush=True)
